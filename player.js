@@ -301,7 +301,7 @@ $(function () {
      * @param {PIXI.interaction.InteractionData} ev - click data
      */
     Player.prototype.onBotClick = function (ev) {
-        var bot = ev.target;
+        bot = ev.target;
         if (bot.selectedBot != bot.id) {
             this.selectBot(bot.id);
 
@@ -752,7 +752,7 @@ $(function () {
     Player.prototype.updateStatsPanel = function () {
         var counts = {a: {hq: 0, soldier: 0, artillery: 0, generator: 0, shields: 0, medbay: 0, supplier: 0},
                        b: {hq: 0, soldier: 0, artillery: 0, generator: 0, shields: 0, medbay: 0, supplier: 0}};
-        var bot;
+
         var hq = {a: null, b: null};
         for (var bk in this.matchState.robots) {
             bot = this.matchState.robots[bk];
@@ -802,7 +802,7 @@ $(function () {
      */
     Player.prototype.updateSelectedBotPanel = function () {
         if (this.selectedBot) {
-            var bot = this.matchState.robots[this.selectedBot];
+            bot = this.matchState.robots[this.selectedBot];
             if (bot) {
                 $("#selectedBotPanel .botIcon").css({backgroundImage: "url(img/" + bot.type + "-" + bot.team + "-lg.png)", backgroundColor: 'transparent'});
                 $('.botIcon .energonOuter', this.selectedBotPanel).show();
@@ -903,7 +903,7 @@ $(function () {
      */
 
     Player.prototype.apply_spawn = function (ev, animate) {
-        var bot = new PIXI.Sprite(this.textures[ev.bot.team.toLowerCase()][ev.bot.type.toLowerCase()]);
+        bot = new PIXI.Sprite(this.textures[ev.bot.team.toLowerCase()][ev.bot.type.toLowerCase()]);
         bot.id = ev.bot.id;
         bot.interactive = true;
         bot.on('mousedown', this.onBotClick.bind(this));
@@ -980,7 +980,7 @@ $(function () {
 
 
     Player.prototype.apply_attack = Player.prototype.undo_attack = function (ev, animate) {
-        var bot = this.matchState.robots[ev.botId];
+        bot = this.matchState.robots[ev.botId];
         if (bot === undefined) {
             console.log("Couldn't find attacking bot");
         }
@@ -1019,7 +1019,7 @@ $(function () {
 
 
     Player.prototype.apply_removeDead = function (ev, animate) {
-        var bot = this.botSprites[ev.bot.id];
+        bot = this.botSprites[ev.bot.id];
         delete this.botSprites[ev.bot.id];
         this.botLayer.removeChild(bot);
         bot.destroy();
@@ -1027,7 +1027,7 @@ $(function () {
 
 
     Player.prototype.undo_removeDead = function (ev, animate) {
-        var bot = new PIXI.Sprite(this.textures[ev.bot.team.toLowerCase()][ev.bot.type.toLowerCase()]);
+        bot = new PIXI.Sprite(this.textures[ev.bot.team.toLowerCase()][ev.bot.type.toLowerCase()]);
         bot.interactive = true;
         bot.on('mousedown', this.onBotClick.bind(this));
         bot.id = ev.bot.id;
@@ -1051,41 +1051,41 @@ $(function () {
 
 
     Player.prototype.apply_move = function (ev, animate) {
-        var botSprite = this.botSprites[ev.botId];
+        sprite = this.botSprites[ev.botId];
         if (animate) {
-            TweenLite.to(botSprite.position, this.frameDuration/1000, this.getCellCenter(ev.to));
+            TweenLite.to(sprite.position, this.frameDuration/1000, this.getCellCenter(ev.to));
         } else {
-            botSprite.position = this.getCellCenter(ev.to);
+            sprite.position = this.getCellCenter(ev.to);
         }
-        botSprite.rotation = ev.dir;
+        sprite.rotation = ev.dir;
     };
 
 
     Player.prototype.undo_move = function (ev, animate) {
-        var botSprite = this.botSprites[ev.botId];
-        if (botSprite) {
+        sprite = this.botSprites[ev.botId];
+        if (sprite) {
             if (animate) {
-                TweenLite.to(botSprite.position, this.frameDuration / 1000, this.getCellCenter(ev.from));
+                TweenLite.to(sprite.position, this.frameDuration / 1000, this.getCellCenter(ev.from));
             } else {
-                botSprite.position = this.getCellCenter(ev.from);
+                sprite.position = this.getCellCenter(ev.from);
             }
-            botSprite.rotation = ev.dir;
+            sprite.rotation = ev.dir;
         }
     };
 
 
     Player.prototype.apply_defuseMine = function (ev, animate) {
-        var botSprite = this.botSprites[ev.botId];
-        if (botSprite) {
-            botSprite.rotation = ev.dir;
+        sprite = this.botSprites[ev.botId];
+        if (sprite) {
+            sprite.rotation = ev.dir;
         }
     };
 
 
     Player.prototype.undo_defuseMine = function (ev, animate) {
-        var botSprite = this.botSprites[ev.botId];
-        if (botSprite) {
-            botSprite.rotation = ev.dir;
+        sprite = this.botSprites[ev.botId];
+        if (sprite) {
+            sprite.rotation = ev.dir;
         }
     };
 
@@ -1096,18 +1096,18 @@ $(function () {
      * @param {Object} loc - the location where the explosion should occur
      */
     Player.prototype.createExplosion = function (loc) {
-        var boom = new PIXI.extras.MovieClip(this.boomFrames);
-        this.effectsLayer.addChild(boom);
-        boom.position = this.getCellCenter(loc);
-        boom.anchor = {x: 0.5, y: 0.5};
-        boom.width = this.cellSize * 2;
-        boom.height= this.cellSize * 2;
-        boom.loop = false;
-        boom.on('complete', function () {
-            this.effectsLayer.removeChild(boom);
-            boom.destroy();
+        sprite = new PIXI.extras.MovieClip(this.boomFrames);
+        this.effectsLayer.addChild(sprite);
+        sprite.position = this.getCellCenter(loc);
+        sprite.anchor = {x: 0.5, y: 0.5};
+        sprite.width = this.cellSize * 2;
+        sprite.height= this.cellSize * 2;
+        sprite.loop = false;
+        sprite.on('complete', function () {
+            this.effectsLayer.removeChild(sprite);
+            sprite.destroy();
         }.bind(this));
-        boom.play();
+        sprite.play();
     };
 
     /**
