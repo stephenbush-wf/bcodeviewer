@@ -7,7 +7,7 @@ $(function () {
 
     // Temporary variables to avoid
     // constant allocation;
-    var bk, i, sprite, bot, sel;
+    var bk, i, sprite, bot, sel, delta;
 
 
     /**
@@ -1187,7 +1187,7 @@ $(function () {
             this.lastElapsed = elapsed;
         }
 
-        var delta = (elapsed - this.lastElapsed);
+        delta = (elapsed - this.lastElapsed);
 
         if (!this.paused) {
             this.frameTime += (delta);
