@@ -3,20 +3,12 @@ $(function () {
     var MINE_A = 0xFF6666;
     var MINE_B = 0x6666FF;
 
-    function truncRadians(r) {
-        while (r < 0) {
-            r += Math.PI * 2;
-        }
-        return r;
-    }
 
-    function getRotation(p1, p2) {
-        //
-        var vec = {x: p2.x - p1.x, y: p2.y - p1.y};
-        var rot = truncRadians(Math.atan2(vec.y, vec.x)); // - (Math.PI / 2));
-        return rot;
-    }
-
+    /**
+     * Create a MatchState representing a single round of gameplay.
+     *
+     * @constructor
+     */
     var MatchState = function () {
         this.roundNumber = 0;
         this.research = {a: {}, b: {}};
@@ -27,11 +19,24 @@ $(function () {
         this.delta = [];
     };
 
+
+    /**
+     * Check if the given team has fully researched defusion.
+     *
+     * @param team
+     * @returns {boolean}
+     */
     MatchState.prototype.hasDefusion = function (team) {
         var val = this.research[team].DEFUSION;
         return val >= 25;
     };
 
+
+    /**
+     * Creates a Match.
+     *
+     * @constructor
+     */
     var Match = function () {
         this.states = [];
         this.matchNumber = 0;
@@ -41,6 +46,14 @@ $(function () {
         this.winner = null;
     };
 
+    /**
+     * Create a Game containing one or more matches.
+     *
+     * The Game object is responsible for loading a game, parsing the xml and
+     * generating Match and MatchState objects which the Player uses.
+     *
+     * @constructor
+     */
     var Game = function () {
         EventEmitter.call(this);
         this.matches = [];
@@ -48,9 +61,29 @@ $(function () {
         this.isLoaded = false;
         this.isLoading = false;
     };
-
     Game.prototype = new EventEmitter;
 
+
+    /**
+     * Convert a string location of the format 'x,y' to an integer
+     * representing the index of that location in a 1-dimensional array.
+     *
+     * @param {String} locStr - a location (eg. 10,2)
+     * @returns {Number}
+     */
+    Game.prototype.parseLoc = function (locStr) {
+        var parts = locStr.split(",");
+        var x = parseInt(parts[0]);
+        var y = parseInt(parts[1]);
+        return (y*this.currentMatch.mapWidth) + x;
+    };
+
+
+    /**
+     * Process the MatchHeader element
+     *
+     * @param {Object} node - a ser.MatchHeader XML node
+     */
     Game.prototype.doMatchHeader = function (node) {
 
         var $map = $("map", node);
@@ -63,13 +96,12 @@ $(function () {
         this.currentMatch.mapHeight = map.length;
     };
 
-    Game.prototype.parseLoc = function (locStr) {
-        var parts = locStr.split(",");
-        var x = parseInt(parts[0]);
-        var y = parseInt(parts[1]);
-        return (y*this.currentMatch.mapWidth) + x;
-    };
 
+    /**
+     * Process the MatchFooter element
+     *
+     * @param {Object} node - a ser.MatchFooter XML node
+     */
     Game.prototype.doMatchFooter = function (node) {
         this.currentMatch.winner = $(node).attr("winner").toLowerCase();
 
@@ -82,24 +114,51 @@ $(function () {
 
     };
 
+
+    /**
+     * Process the ExtensibleMetadata element
+     *
+     * @param {Object} node - a ser.ExtensibleMetadata XML node
+     */
     Game.prototype.doMatchMetadata = function (node) {
         this.teams.a = {name: $(node).attr('team-a')};
         this.teams.b = {name: $(node).attr('team-b')};
         this.currentMatch.mapName = $(node).attr("maps").split(",")[this.currentMatch.matchNumber];
     };
 
+
+    /**
+     * Process the NodeBirthSignal element
+     *
+     * @param {Object} node - a sig.NodeBirthSignal element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleEncampment = function (node, state) {
         var locKey = this.parseLoc($(node).attr("location"));
         state.delta.push({event: 'addEncampmentSquare', location: locKey});
         state.encampments[locKey] = true;
     };
 
+
+    /**
+     * Process the IndicatorStringSignal element
+     *
+     * @param {Object} node - a sig.IndicatorStringSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleIndicatorString = function (node, state) {
         var rId = $(node).attr("robotID");
         var sId = $(node).attr("stringIndex");
         state.robots[rId].indicatorStrings[sId] = $(node).attr("newString");
     };
 
+
+    /**
+     * Process the MineSignal element
+     *
+     * @param {Object} node - a sig.MineSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleMine = function (node, state) {
         var team = $(node).attr('mineTeam').toLowerCase();
         var birth = $(node).attr('birth');
@@ -136,6 +195,13 @@ $(function () {
         }
     };
 
+
+    /**
+     * Process the SpawnSignal element
+     *
+     * @param {Object} node - a sig.SpawnSignal XML element
+     * @param {MatchState} state - the current round being processed.
+     */
     Game.prototype.handleSpawn = function (node, state) {
         var loc = $(node).attr('loc').split(",");
         var type = $(node).attr('type');
@@ -159,7 +225,7 @@ $(function () {
         bot.energon = 100;
         if (bot.type == 'soldier') {
             bot.energon = 40;
-            bot.dir = getRotation(state.robots[parentID].pos, bot.pos);
+            bot.dir = Util.getRotation(state.robots[parentID].pos, bot.pos);
         } else if (bot.type == 'hq') {
             bot.energon = 500;
         }
@@ -168,6 +234,13 @@ $(function () {
         state.delta.push({event: 'spawn', bot: bot});
     };
 
+
+    /**
+     * Process the MovementSignal element
+     *
+     * @param {Object} node - a sig.MovementSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleMove = function (node, state) {
         var robotId = $(node).attr('robotID');
         var bot = state.robots[robotId];
@@ -175,11 +248,18 @@ $(function () {
         var newLoc = $(node).attr("newLoc").split(",");
         newLoc = {x: parseInt(newLoc[0]), y: parseInt(newLoc[1])};
 
-        bot.dir = getRotation(bot.pos, newLoc);
+        bot.dir = Util.getRotation(bot.pos, newLoc);
         state.delta.push({event: 'move', botId: bot.id, from: bot.pos, to: newLoc, dir: bot.dir});
         bot.pos = newLoc;
     };
 
+
+    /**
+     * Process the DeathSignal element
+     *
+     * @param {Object} node - a sig.DeathSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleDeath = function (node, state) {
         var robotId = $(node).attr('objectID');
         state.robots[robotId].energon = 0;
@@ -188,6 +268,13 @@ $(function () {
         this.toDie.push(robotId);
     };
 
+
+    /**
+     * Process the AttackSignal element
+     *
+     * @param {Object} node - a sig.AttackSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleAttack = function (node, state) {
         var bot = state.robots[$(node).attr("robotID")];
         var srcLoc = bot.pos;
@@ -198,6 +285,13 @@ $(function () {
         state.delta.push({event: 'attack', botId: bot.id, target: loc});
     };
 
+
+    /**
+     * Process the BytescodesUsedSignal element
+     *
+     * @param {Object} node - a sig.BytecodesUsedSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleBytecodesUsed = function (node, state) {
         var botIds = $(node).attr("robotIDs").split(",");
         var bot;
@@ -209,6 +303,13 @@ $(function () {
         }
     };
 
+
+    /**
+     * Process the ResearchSignal element
+     *
+     * @param {Object} node - a sig.ResearchSignal element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleResearch = function (node, state) {
         var team = $(node).attr("team").toLowerCase();
         var upgrade = $('upgrade', node).text();
@@ -222,6 +323,13 @@ $(function () {
         state.delta.push(delta);
     };
 
+
+    /**
+     * Process the MineLayerSignal element
+     *
+     * @param {Object} node - a sig.MineLayerSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleMineLayer = function (node, state) {
         var bot = state.robots[$(node).attr("robotID")];
         var isLaying = $(node).attr("isLaying") == "true";
@@ -236,7 +344,7 @@ $(function () {
             delta.event = 'defuseMine';
             bot.action = "defusingMine";
             bot.actionRounds = state.hasDefusion(bot.team) ? 5 : 12;
-            bot.dir = getRotation(bot.pos, mineLoc);
+            bot.dir = Util.getRotation(bot.pos, mineLoc);
             delta.dir = bot.dir;
         }
 
@@ -244,6 +352,13 @@ $(function () {
         state.delta.push(delta);
     };
 
+
+    /**
+     * Process the EnergonChangeSignal element
+     *
+     * @param {Object} node - a sig.EnergonChangeSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleEnergonChange = function (node, state) {
         var botKeys = $(node).attr("robotIDs").split(",");
         var delta = {event: 'energonChange', values: {}};
@@ -258,6 +373,12 @@ $(function () {
         }
     };
 
+
+    /**
+     * Process the FluxChangeSignal element
+     * @param {Object} node - a sig.FluxChangeSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleTeamPowerChange = function (node, state) {
         var values = $(node).attr('flux').split(',');
         state.power.a = parseFloat(values[0]);
@@ -265,6 +386,13 @@ $(function () {
         state.delta.push({event: 'teamPowerChange', power: state.power});
     };
 
+
+    /**
+     * Process the ShieldChangeSignal element
+     *
+     * @param {Object} node - a sig.ShieldChangeSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleShieldsChange = function (node, state) {
         var botKeys = $(node).attr('robotIDs').split(',');
         var delta = {event: 'shieldsChange', values: {}};
@@ -279,16 +407,33 @@ $(function () {
         }
     };
 
+
+    /**
+     * Process the RegenSignal element
+     * @param {Object} node - a sig.RegenSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleRegen = function (node, state) {
         var rId = $(node).attr("robotID");
         state.delta.push({event: 'regen', loc: state.robots[rId].pos});
     };
 
+    /**
+     * Process the ShieldSignal element
+     * @param {Object} node - a sig.ShieldSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleShield = function (node, state) {
         var rId = $(node).attr("robotID");
         state.delta.push({event: 'shield', loc: state.robots[rId].pos});
     };
 
+
+    /**
+     * Process the CaptureSignal element
+     * @param {Object} node - a sig.CaptureSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
     Game.prototype.handleCapture = function (node, state) {
         var rId = $(node).attr("parentID");
         var loc = $(node).attr("loc").split(",");
@@ -298,9 +443,15 @@ $(function () {
         bot.actionRoundsTotal = 50;
     };
 
+
+    /**
+     * Process a RoundDelta node containing all the signals
+     * which make up a single Match.
+     *
+     * @param {Object} node - a ser.RoundDelta XML element
+     */
     Game.prototype.doRoundDelta = function (node) {
         var state;
-
 
         if (this.currentMatch.states.length == 0) {
             state = new MatchState();
@@ -372,11 +523,25 @@ $(function () {
         }
     };
 
+
+    /**
+     * Emits progress events when the match file is being downloaded.
+     *
+     * @param {Object} ev - a download progress event.
+     */
     Game.prototype.downloadProgressHandler = function (ev) {
         var value = (ev.loaded / ev.total) * 10;
         this.emit('loadProgress', value);
     };
 
+
+    /**
+     * Processes the sig.* elements in a RoundDelta for 50ms, then queue
+     * this function again to continue until all children are processed.
+     *
+     * @param {Object[]} children - an array of sig.* xml elements
+     * @param {Number} total - the total number of elements in the array the first time the function is called.
+     */
     Game.prototype.processChildren = function (children, total) {
         var startedAt = new Date().getTime();
         var node;
@@ -403,6 +568,12 @@ $(function () {
         }
     };
 
+
+    /**
+     * Load the gzipped game state from an ArrayBuffer.
+     *
+     * @param {ArrayBuffer} data - an ArrayBuffer of bytes.
+     */
     Game.prototype.loadGzipped = function (data) {
         var arr = new Uint8Array(data);
         console.log("read " + arr.length + " bytes.");
@@ -416,6 +587,12 @@ $(function () {
         this.processChildren(children, children.length);
     };
 
+
+    /**
+     * Load a Game from the file in a file input field.
+     *
+     * @param {Object} fileInput - a browser file input element.
+     */
     Game.prototype.loadFile = function (fileInput) {
         var file = fileInput.files[0];
         var reader = new FileReader();
@@ -426,6 +603,12 @@ $(function () {
         reader.readAsArrayBuffer(file);
     };
 
+
+    /**
+     * Load a Game from a URL
+     *
+     * @param {String] url - a URL to load the Game from.
+     */
     Game.prototype.loadUrl = function (url) {
         console.log("Loading match from " + url);
         this.isLoading = true;

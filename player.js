@@ -5,34 +5,132 @@ $(function () {
     var MINE_B = 0x6666FF;
     var FRAME_DURATION = 1000;
 
-    var bk, i;
+    // Temporary variables to avoid
+    // constant allocation;
+    var bk, i, sprite, bot, sel;
 
+
+    /**
+     * Creates the BattleCode Game Viewer.
+     *
+     * @param {Object} container - an element to serve as the container for the player
+     * @constructor
+     */
     var Player = function (container) {
-        this.assetsLoaded = false;
+
+        /**
+         * The container for the entire player
+         * @member {jQuery} container
+         */
         this.container = $(container);
         this.container.empty();
+
+        /**
+         * have the textures loaded yet?
+         * @member {boolean} assetsLoaded
+         */
+        this.assetsLoaded = false;
+
+        /**
+         * a Game object to play.
+         * @member {Game} game
+         */
         this.game = null;
+
+        /**
+         * Is playback paused?
+         * @member {boolean} paused
+         */
         this.paused = true;
+
+        /**
+         * time in MS that each round should last
+         * @member {Number} frameDuration
+         * */
         this.frameDuration = FRAME_DURATION;
+
+        /**
+         * a div within container to hold the canvas.
+         * @member {jQuery} canvasContainer
+         */
         this.canvasContainer = $("<div id='canvasContainer'></div>");
+
+        /**
+         * the top level rendering container.
+         * @member {PIXI.Container} stage;
+         */
         this.stage = new PIXI.Container();
+
+        /**
+         * the layer which mines are drawn on.
+         * @member {PIXI.Graphics} field
+         */
         this.field = new PIXI.Graphics();
-        this.botLayer = new PIXI.Container(); //new PIXI.ParticleContainer(10000, {scale: true, position: true, rotation: true, uvs: true});
+
+        /**
+         * the layer which all robots are drawn on.
+         * @member {PIXI.Container} botLayer
+         */
+        this.botLayer = new PIXI.Container();
+
+        /**
+         * the layer which artillery fire, explosions,
+         * and shield/medbay 'auras' are drawn on
+         * @member {PIXI.Graphics} effectsLayer
+         */
         this.effectsLayer = new PIXI.Graphics();
+
+        /**
+         * the layer which health and action bars are drawn on
+         *
+         * @member {PIXI.Graphics} statusLayer
+         */
         this.statusLayer = new PIXI.Graphics();
-        this.statsPanel = new PIXI.Container();
+
+        /**
+         * the PIXI renderer
+         * @member {*|WebGLRenderer|CanvasRenderer} renderer
+         */
+        this.renderer = PIXI.autoDetectRenderer(
+            $(this.canvasContainer).width(),
+            $(this.canvasContainer).height(),
+            {antialias: false, transparent: true, autoResize: true});
+
+        /**
+         * the PIXI InteractionManager
+         * @member {PIXI.interaction.InteractionManager} renderer
+         */
+        this.interactionManager = new PIXI.interaction.InteractionManager(
+            this.renderer, {autoPreventDefault: true});
+
+        /**
+         * a div created by the player to contain detail panels
+         * for each team and the selected robot.
+         * @type {jQuery} statsPanel
+         */
+        this.statsPanel = null;
+
         this.stage.addChild(this.field);
         this.stage.addChild(this.botLayer);
         this.stage.addChild(this.statusLayer);
         this.stage.addChild(this.effectsLayer);
-        this.renderer = PIXI.autoDetectRenderer($(this.canvasContainer).width(), $(this.canvasContainer).height(), {antialias: false, transparent: true, autoResize: true});
-        this.interactionManager = new PIXI.interaction.InteractionManager(this.renderer, {autoPreventDefault: true});
+
         this.canvasContainer.append(this.renderer.view);
         $(window).on('resize', '', this.onResize.bind(this));
+
         this.loadAssets();
     };
 
+
+    /**
+     * Called when assets are fully loaded
+     *
+     * @param {PIXI.Loader} loader - the PIXI Asset loader
+     * @param {Object} resources - the loaded resources
+     */
     Player.prototype.onAssetsLoaded = function (loader, resources) {
+
+        // initialize the exposion animation texture-array;
         this.boomFrames = [];
         var texture = resources.boom.texture;
         var frameWidth = 60, frameHeight = 60;
@@ -45,18 +143,26 @@ $(function () {
         }
         rev.reverse();
         this.boomFrames = this.boomFrames.concat(rev);
+
+        // initialize this.textures with all bot textures.
         for (var t in {a: true, b: true}) {
             for (var rt in {soldier: true, hq: true, artillery: true, medbay: true, shields: true, supplier: true, generator: true}) {
                 this.textures[t][rt] = new PIXI.Texture(resources[rt + '-' + t].texture);
             }
         }
+
         this.assetsLoaded = true;
 
-        this.buildHeader();
+        this.container.append(this.buildHeader());
         this.container.append(this.canvasContainer);
         requestAnimationFrame( this.animate.bind(this) );
     };
 
+
+    /**
+     * Pre-loads all textures needed by the viewer and calls
+     * onAssetsLoaded when complete
+     */
     Player.prototype.loadAssets = function () {
         PIXI.loader
             .add("boom", "img/boom.png")
@@ -77,26 +183,151 @@ $(function () {
             .load(this.onAssetsLoaded.bind(this));
     };
 
+
+    /**
+     * called when the window is resized.
+     */
+    Player.prototype.onResize = function () {
+        console.log("Container resized!");
+        var newW = $(this.canvasContainer).width();
+        var newH = $(this.canvasContainer).height() - 1;
+        if (this.renderer && this.renderer.view) {
+            console.log("Resizing renderer to " + newW + "x" + newH);
+            $(this.renderer.view).width(newW + "px");
+            $(this.renderer.view).height(newH + "px");
+            this.renderer.resize(newW, newH);
+            this.setDimensions();
+        }
+    };
+
+
+    /**
+     * called when a new match is selected from the dropdown
+     *
+     * @param {Object} ev - change event
+     */
+    Player.prototype.onMatchSelectorChange = function (ev) {
+        var val = $(ev.currentTarget).val();
+        console.log("Match: val");
+        if (!this.paused) {
+            this.togglePlayback();
+        }
+        this.initMatch(this.game.matches[val])
+    };
+
+
+    /**
+     * called when the 'Go to first round' button is clicked
+     *
+     * @param {Object} ev - click event
+     */
+    Player.prototype.onGotoStartButton = function (ev) {
+        this.transitionToRound(0);
+    };
+
+
+    /**
+     * called when the 'Go to last round' button is clicked
+     *
+     * @param {Object} ev - click event
+     */
+    Player.prototype.onGotoEndButton = function (ev) {
+        this.transitionToRound(this.match.states.length-1);
+    };
+
+
+    /**
+     * called when the 'Go to next round' button is clicked
+     *
+     * @param {Object} ev - click event
+     */
+    Player.prototype.onGoForwardButton = function (ev) {
+        this.transitionToRound(Math.min(this.round + 1, this.match.states.length-1));
+    };
+
+
+    /**
+     * called when the 'Go to previous round' button is clicked
+     *
+     * @param {Object} ev - click event
+     */
+    Player.prototype.onGoBackButton = function (ev) {
+        this.transitionToRound(Math.max(this.round - 1, 0));
+    };
+
+
+    /**
+     * called when the 'fullscreen' button is clicked
+     *
+     * @param {Object} ev - click event
+     */
+    Player.prototype.onFullscreenButton = function (e) {
+        if (Util.isFullscreen()) {
+            Util.cancelFullscreen();
+        } else {
+            Util.makeFullscreen($('body'));
+        }
+    };
+
+    /**
+     * called when the round slider is moved.
+     *
+     * @param {Object} e - change event
+     */
+    Player.prototype.onTimeSliderChange = function (e) {
+        this.transitionToRound($(e.currentTarget).val());
+    };
+
+    /**
+     * called when the pseed slider is moved.
+     *
+     * @param {Object} e - change event
+     */
+    Player.prototype.onSpeedSliderChange = function (e) {
+
+        var pct = (this.speedSlider.val()/100.0);
+        this.frameDuration = FRAME_DURATION - (FRAME_DURATION * pct);
+        console.log("Setting frameDuration to " + this.frameDuration);
+        this.speedIndicator.text(this.speedSlider.val() + "%");
+        for (i=0; i<this.boomFrames.length; i++) {
+            this.boomFrames[i].time = this.frameDuration*2 / this.boomFrames.length;
+        }
+    };
+
+
+    /**
+     * called when the user clicks on a robot.
+     *
+     * @param {PIXI.interaction.InteractionData} ev - click data
+     */
     Player.prototype.onBotClick = function (ev) {
         var bot = ev.target;
         if (bot.selectedBot != bot.id) {
-            this.selectBot(bot);
+            this.selectBot(bot.id);
 
         }
-        console.log("Click? ", ev);
     };
 
-    Player.prototype.selectBot = function (bot) {
-        bot = this.matchState.robots[bot.id];
+
+    /**
+     * Set the selected bot by id
+     *
+     * @param {Number} botId - the bot id to select
+     */
+    Player.prototype.selectBot = function (botId) {
+        bot = this.matchState.robots[botId];
         this.selectedBot = bot.id;
         $('.botIcon', this.selectedBotPanel)
             .empty()
             .append("<div class='energonOuter'><div class='energon'></div></div>");
 
         this.updateSelectedBotPanel();
-
     };
 
+
+    /**
+     * Position the stats panel over the unused area of the canvas.
+     */
     Player.prototype.positionStatsPanel = function () {
         var bottomSpace = $(this.canvasContainer).height() - this.boardHeight;
         var rightSpace = $(this.canvasContainer).width() - this.boardWidth;
@@ -112,7 +343,7 @@ $(function () {
                 top: top,
                 width: this.boardWidth,
                 height: this.canvasContainer.height() - this.boardHeight,
-                flexDirection: 'row',
+                flexDirection: 'row'
             });
         } else {
             this.statsHorizontal = false;
@@ -127,52 +358,240 @@ $(function () {
                 flexDirection: 'column'
             });
 
-        };
-
-
-        //this.positionStatsPanelChildren(this.statsPanel.children[0]);
-        //this.positionStatsPanelChildren(this.statsPanel.children[1]);
-
-    };
-
-    Player.prototype.onResize = function () {
-        console.log("Container resized!");
-        var newW = $(this.canvasContainer).width();
-        var newH = $(this.canvasContainer).height() - 1;
-        if (this.renderer && this.renderer.view) {
-            console.log("Resizing renderer to " + newW + "x" + newH);
-            $(this.renderer.view).width(newW + "px");
-            $(this.renderer.view).height(newH + "px");
-            this.renderer.resize(newW, newH);
-            this.setDimensions();
         }
     };
 
-    Player.prototype.onMatchSelectorChange = function (ev) {
-        var val = $(ev.currentTarget).val();
-        console.log("Match: val");
+
+    /**
+     * sets the size of game objects based on available screen size.
+     */
+    Player.prototype.setDimensions = function () {
+        var wPix = (this.canvasContainer.width() / this.match.mapWidth);
+        var hPix = (this.canvasContainer.height() / this.match.mapHeight);
+
+        this.cellSize = Math.min(wPix, hPix);
+        this.boardWidth = (this.cellSize * this.match.mapWidth);
+        this.boardHeight = (this.cellSize * this.match.mapHeight);
+
+        var bottomSpace = $(this.canvasContainer).height() - this.boardHeight;
+        var rightSpace = $(this.canvasContainer).width() - this.boardWidth;
+
+        if (bottomSpace > rightSpace) {
+            while (bottomSpace < 160) {
+                this.cellSize-=0.25;
+                this.boardWidth = (this.cellSize * this.match.mapWidth);
+                this.boardHeight = (this.cellSize * this.match.mapHeight);
+                bottomSpace = $(this.canvasContainer).height() - this.boardHeight;
+            }
+        } else {
+            while (rightSpace < 250) {
+                this.cellSize -= 0.25;
+                this.boardWidth = (this.cellSize * this.match.mapWidth);
+                this.boardHeight = (this.cellSize * this.match.mapHeight);
+                rightSpace = $(this.canvasContainer).width() - this.boardWidth;
+            }
+        }
+
+        this.botSize = this.cellSize;
+        this.halfBotSize = this.botSize / 2;
+
+        if (this.matchState) {
+            var sprite, bot;
+            for (var bk in this.matchState.robots) {
+                bot = this.matchState.robots[bk];
+                sprite = this.botSprites[bk];
+                sprite.width = this.botSize;
+                sprite.height = this.botSize;
+                TweenLite.killTweensOf(sprite.position);
+                sprite.position = this.getCellCenter(bot.pos);
+            }
+        } if (this.statsPanel) {
+            this.positionStatsPanel();
+        }
+
+        console.log("Initialized " + this.boardWidth + "x" + this.boardHeight +
+                    " canvas and " + this.cellSize + "px cell size");
+    };
+
+
+    /**
+     * Called when the Game begins loading.
+     *
+     * Shows a Loading dialog.
+     */
+    Player.prototype.onGameLoadStart = function () {
+        this.loadDialog = $("<div id='loadDialog'><h2>Loading Game</h2><progress></progress></div>");
+        $('progress', this.loadDialog).attr("max", 100);
+        $('progress', this.loadDialog).attr("value", 0);
+        this.loadDialog.css({
+            position: 'absolute',
+            top: '45%',
+            left: '30%',
+            width: '40%'
+        });
+        $('body').append(this.loadDialog);
+    };
+
+
+    /**
+     * Called throughout the Game loading process.
+     *
+     * @param {Number} progress - loading progress (0-100)
+     */
+    Player.prototype.onGameLoadProgress = function (progress) {
+        setTimeout(function () {
+            $("progress", this.loadDialog).attr("value", Math.floor(progress));
+        }.bind(this), 1);
+    };
+
+
+    /**
+     * Called when the Game is fully loaded and parsed.
+     */
+    Player.prototype.onGameLoadComplete = function () {
+
+        if (this.loadDialog) {
+            this.loadDialog.remove();
+        }
+
+        this.matchSelector.empty();
+        for (var i=0; i<this.game.matches.length; i++) {
+            var mapName = this.game.matches[i].mapName;
+            if (mapName.substring(mapName.length-4).toLowerCase() == '.xml') {
+                mapName = mapName.substring(0, mapName.length-4);
+            }
+            this.matchSelector.append("<option value='" + i + "'>" + i + ". " + mapName + "</option>");
+        }
+        this.initMatch(this.game.matches[0]);
+    };
+
+
+    /**
+     * sets the Game to be played.
+     *
+     * @param {Game} game - a Game
+     * @param {function} callback - a function to call when loading is complete.
+     */
+    Player.prototype.loadGame = function (game, callback) {
+
         if (!this.paused) {
+            console.log("Toggling");
             this.togglePlayback();
+            this.transitionToRound(0);
         }
-        this.initMatch(this.game.matches[val])
+
+        if (typeof game == 'string') {
+            this.game = new Game();
+            this.game.load(game);
+        } else {
+            this.game = game;
+        }
+        if (!game.isLoaded) {
+            this.game.on('loadStart', this.onGameLoadStart.bind(this));
+            this.game.on('loadProgress', this.onGameLoadProgress.bind(this));
+            this.game.on('loadComplete', this.onGameLoadComplete.bind(this));
+        } else {
+            this.onGameLoadComplete();
+        }
     };
 
-    Player.prototype.onGotoStartButton = function (ev) {
+
+    /**
+     * Intialize the player for the selected match
+     * (resizes the game board and stats panel)
+     *
+     * @param {Match} match - the match
+     */
+    Player.prototype.initMatch = function (match) {
+        this.match = match;
+        this.reset();
+        $(window).resize();
+        this.renderMap();
+        this.timeSlider.val(0);
+        this.timeSlider.attr("max", this.match.states.length-1);
         this.transitionToRound(0);
     };
 
-    Player.prototype.onGotoEndButton = function (ev) {
-        this.transitionToRound(this.match.states.length-1);
+    /**
+     * Renders a batch of mines using the current line/fill style.
+     *
+     * @param {Object} mines - keys are integers mapping to locations, values are 'true'
+     */
+    Player.prototype.renderMineList = function (mines) {
+        var mine, gx, gy, px, py;
+        for (var mine in mines) {
+            mine = parseInt(mine);
+            gx = mine % this.match.mapWidth;
+            gy = Math.floor(mine / this.match.mapWidth);
+            px = 1+(this.cellSize * gx);
+            py = 1+(this.cellSize* gy);
+            this.field.drawRect(px, py, this.cellSize-2, this.cellSize-2);
+        }
     };
 
-    Player.prototype.onGoForwardButton = function (ev) {
-        this.transitionToRound(Math.min(this.round + 1, this.match.states.length-1));
+
+    /**
+     * Builds a 'Team Stats Panel' for the given team.
+     * this is a div containing power levels, bot counts and upgrade progress.
+     *
+     * @param {String} team - 'a' or 'b'
+     * @returns {jQuery}
+     */
+    Player.prototype.buildTeamStatsPanel = function (team) {
+        var teamInfo = this.game.teams[team];
+        var $panel = $("<div class='teamStatsPanel' id='team-stats-"+team+"'></div>");
+        $panel.css({flex: 1});
+        $panel.append($("<h1 class='team-" + team + "'>" + teamInfo.name + "</h1>"));
+
+        var hqContainer = $("<div style='display: flex; flex-direction: row'></div>");
+        var hqIcon = $("<div class='hqIcon team-" + team + "'></div>");
+        var hqEnergon = $("<div class='energonOuter'><div class='energon'></div></div>");
+        hqIcon.append(hqEnergon);
+        hqContainer.append(hqIcon);
+        var botCounts = $("<div class='botCounts'></div>");
+        var botCountsTbl = $("<table></table>");
+        botCountsTbl.append($('<tr><th class="soldier"></th><td class="soldier">0</td><th class="medbay"></th><td class="medbay">0</td><th class="shields"></th><td class="shields">0</td></tr>'));
+        botCountsTbl.append($('<tr><th class="supplier"></th><td class="supplier">0</td><th class="generator"></th><td class="generator">0</td><th class="artillery"></th><td class="artillery">0</td></tr>'));
+        botCounts.append(botCountsTbl);
+        var progressBar = $("<span class='power-value'>0</span><div class='teamPowerWrapper'><div class='teamPower'></div></div>");
+        botCounts.append(progressBar);
+        hqContainer.append(botCounts);
+        $panel.append(hqContainer);
+        for (var u in this.upgrades) {
+            $panel.append($('<div title="' + u + '" style="display: none" class="upgrade '+ u + '">' +
+                    '<img src="img/' + u.toLowerCase() + '.png" />' +
+                    '<progress value="0" max="' + this.upgrades[u] + '"></progress>' +
+                '</div>'));
+        }
+        return $panel;
     };
 
-    Player.prototype.onGoBackButton = function (ev) {
-        this.transitionToRound(Math.max(this.round - 1, 0));
+
+    /**
+     * Builds the 'Selected Bot Panel' where details on the
+     * selected bot are displayed.
+     *
+     * @returns {jQuery}
+     */
+    Player.prototype.buildSelectedBotPanel = function () {
+        this.selectedBotPanel = $(
+            "<div id='selectedBotPanel'>" +
+                "<h1></h1>" +
+                "<div class='selectedBotDetailWrap'>" +
+                    "<div class='botIcon'></div>" +
+                    "<div class='details'></div>" +
+                "</div>" +
+            "<div class='indicatorStrings'></div>" +
+            "</div>");
+        return this.selectedBotPanel;
     };
 
+
+    /**
+     * Builds the Player's header where are all controls reside.
+     *
+     * @returns {jQuery}
+     */
     Player.prototype.buildHeader = function () {
         this.header = $("<div id='header'></div>");
         this.matchSelector = $("<select id='matchSelector'></select>");
@@ -210,348 +629,15 @@ $(function () {
         this.speedSlider.on('change input', '', this.onSpeedSliderChange.bind(this));
         this.speedSlider.change();
         this.playPauseButton.on('click', '', this.togglePlayback.bind(this));
-        this.container.append(this.header);
+        return this.header;
     };
 
-    Player.prototype.onFullscreenButton = function (e) {
-        if (Util.isFullscreen()) {
-            Util.cancelFullscreen();
-        } else {
-            Util.makeFullscreen($('body'));
-        }
-    };
-
-    Player.prototype.onTimeSliderChange = function (e) {
-        this.transitionToRound($(e.currentTarget).val());
-    };
-
-    Player.prototype.onSpeedSliderChange = function (e) {
-
-        var pct = (this.speedSlider.val()/100.0);
-        this.frameDuration = FRAME_DURATION - (FRAME_DURATION * pct);
-        console.log("Setting frameDuration to " + this.frameDuration);
-        this.speedIndicator.text(this.speedSlider.val() + "%");
-        for (i=0; i<this.boomFrames.length; i++) {
-            this.boomFrames[i].time = this.frameDuration*2 / this.boomFrames.length;
-        }
-    };
-
-    Player.prototype.textures = {
-        a: {
-            //soldier: PIXI.Texture.fromImage("img/soldier-a.png", null, PIXI.SCALE_MODES.NEAREST),
-            //supplier: PIXI.Texture.fromImage("img/supplier-a.png", null, PIXI.SCALE_MODES.NEAREST),
-            //generator: PIXI.Texture.fromImage("img/generator-a.png", null, PIXI.SCALE_MODES.NEAREST),
-            //hq: PIXI.Texture.fromImage("img/hq-a.png", null, PIXI.SCALE_MODES.NEAREST),
-            //artillery: PIXI.Texture.fromImage("img/artillery-a.png", null, PIXI.SCALE_MODES.NEAREST),
-            //medbay: PIXI.Texture.fromImage("img/medbay-a.png", null, PIXI.SCALE_MODES.NEAREST),
-            //shields: PIXI.Texture.fromImage("img/shields-a.png", null, PIXI.SCALE_MODES.NEAREST)
-        },
-        b: {
-            //soldier: PIXI.Texture.fromImage("img/soldier-b.png", null, PIXI.SCALE_MODES.NEAREST),
-            //supplier: PIXI.Texture.fromImage("img/supplier-b.png", null, PIXI.SCALE_MODES.NEAREST),
-            //generator: PIXI.Texture.fromImage("img/generator-b.png", null, PIXI.SCALE_MODES.NEAREST),
-            //hq: PIXI.Texture.fromImage("img/hq-b.png", null, PIXI.SCALE_MODES.NEAREST),
-            //artillery: PIXI.Texture.fromImage("img/artillery-b.png", null, PIXI.SCALE_MODES.NEAREST),
-            //medbay: PIXI.Texture.fromImage("img/medbay-b.png", null, PIXI.SCALE_MODES.NEAREST),
-            //shields: PIXI.Texture.fromImage("img/shields-b.png", null, PIXI.SCALE_MODES.NEAREST)
-        }
-        
-    };
-
-    Player.prototype.artilleryShellConfig = {
-        "alpha": {
-            "start": 1,
-            "end": 0
-        },
-        "scale": {
-            "start": 0.12,
-            "end": 0.12,
-            "minimumScaleMultiplier": 1
-        },
-        "color": {
-            "start": "#ebac23",
-            "end": "#9e3020"
-        },
-        "speed": {
-            "start": 40,
-            "end": 50
-        },
-        "acceleration": {
-            "x": 7,
-            "y": 7
-        },
-        "startRotation": {
-            "min": 0,
-            "max": 360
-        },
-        "rotationSpeed": {
-            "min": 55,
-            "max": 0
-        },
-        "lifetime": {
-            "min": 0.251,
-            "max": 0.241
-        },
-        "blendMode": "normal",
-        "frequency": 0.008,
-        "emitterLifetime": -1,
-        "maxParticles": 500,
-        "pos": {
-            "x": 0,
-            "y": 0
-        },
-        "addAtBack": false,
-        "spawnType": "circle",
-        "spawnCircle": {
-            "x": 0,
-            "y": 0,
-            "r": 0
-        }
-    };
-
-    Player.prototype.explosionConfig = {
-        "alpha": {
-            "start": 0.8,
-            "end": 0.7
-        },
-        "scale": {
-            "start": 0.1,
-            "end": 0.01,
-            "minimumScaleMultiplier": 1.28
-        },
-        "color": {
-            "start": "#e3f9ff",
-            "end": "#0ec8f8"
-        },
-        "speed": {
-            "start": 50,
-            "end": 50
-        },
-        "acceleration": {
-            "x": 0,
-            "y": 0
-        },
-        "startRotation": {
-            "min": 0,
-            "max": 0
-        },
-        "rotationSpeed": {
-            "min": 0,
-            "max": 0
-        },
-        "lifetime": {
-            "min": 0.8,
-            "max": 0.8
-        },
-        "blendMode": "normal",
-        "frequency": 0.2,
-        "emitterLifetime": 0.41,
-        "maxParticles": 1000,
-        "pos": {
-            "x": 0,
-            "y": 0
-        },
-        "addAtBack": false,
-        "spawnType": "burst",
-        "particlesPerWave": 8,
-        "particleSpacing": 45,
-        "angleStart": 0
-    };
-
-    Player.prototype.setDimensions = function () {
-        var wPix = (this.canvasContainer.width() / this.match.mapWidth);
-        var hPix = (this.canvasContainer.height() / this.match.mapHeight);
-
-        this.cellSize = Math.min(wPix, hPix);
-        //console.log("Trying cellsize " + this.cellSize);
-        this.boardWidth = (this.cellSize * this.match.mapWidth);
-        this.boardHeight = (this.cellSize * this.match.mapHeight);
-
-        var bottomSpace = $(this.canvasContainer).height() - this.boardHeight;
-        var rightSpace = $(this.canvasContainer).width() - this.boardWidth;
-
-        if (bottomSpace > rightSpace) {
-            while (bottomSpace < 160) {
-                this.cellSize-=0.25;
-                this.boardWidth = (this.cellSize * this.match.mapWidth);
-                this.boardHeight = (this.cellSize * this.match.mapHeight);
-                bottomSpace = $(this.canvasContainer).height() - this.boardHeight;
-            }
-        } else {
-            while (rightSpace < 250) {
-                this.cellSize -= 0.25;
-                this.boardWidth = (this.cellSize * this.match.mapWidth);
-                this.boardHeight = (this.cellSize * this.match.mapHeight);
-                rightSpace = $(this.canvasContainer).width() - this.boardWidth;
-            }
-        }
-        //this.cellSize = this.cellSize;
-        this.botSize = this.cellSize;
-        //if (this.botSize < 8) {
-        //    this.botSize = 8;
-        //} else if (this.botSize < 12) {
-        //    this.botSize = 12;
-        //} else if (this.botSize < 16) {
-        //    this.botSize = 16;
-        //}
-        //
-        //
-        this.halfBotSize = this.botSize / 2;
-        if (this.matchState) {
-            var sprite, bot;
-            for (var bk in this.matchState.robots) {
-                bot = this.matchState.robots[bk]
-                sprite = this.botSprites[bk];
-                sprite.width = this.botSize;
-                sprite.height = this.botSize;
-                TweenLite.killTweensOf(sprite.position);
-                sprite.position = this.getCellCenter(bot.pos);
-            }
-        } if (this.statsPanel) {
-            this.positionStatsPanel();
-        }
-        console.log("Initialized " + this.boardWidth + "x" + this.boardHeight + " canvas and " + this.cellSize + "px cell size");
-    };
-
-    Player.prototype.onGameLoadStart = function () {
-        console.log("Game Load Start");
-        this.loadDialog = $("<div id='loadDialog'><h2>Loading Game</h2><progress></progress></div>");
-        $('progress', this.loadDialog).attr("max", 100);
-        $('progress', this.loadDialog).attr("value", 0);
-        this.loadDialog.css({
-            //background: ''
-            position: 'absolute',
-            top: '45%',
-            left: '30%',
-            width: '40%'
-        });
-        $('body').append(this.loadDialog);
-
-    };
-
-    Player.prototype.onGameLoadProgress = function (progress) {
-        setTimeout(function () {
-            $("progress", this.loadDialog).attr("value", Math.floor(progress));
-        }.bind(this), 1);
-
-    };
-
-    Player.prototype.onGameLoadComplete = function (progress) {
-
-        if (this.loadDialog) {
-            this.loadDialog.remove();
-        }
-
-        this.matchSelector.empty();
-        for (var i=0; i<this.game.matches.length; i++) {
-            var mapName = this.game.matches[i].mapName;
-            if (mapName.substring(mapName.length-4).toLowerCase() == '.xml') {
-                mapName = mapName.substring(0, mapName.length-4);
-            }
-            this.matchSelector.append("<option value='" + i + "'>" + i + ". " + mapName + "</option>");
-        }
-        this.initMatch(this.game.matches[0]);
-    };
-
-    Player.prototype.loadGame = function (game, callback) {
-
-        if (!this.paused) {
-            console.log("Toggling");
-            this.togglePlayback();
-            this.transitionToRound(0);
-        }
-
-        if (typeof game == 'string') {
-            this.game = new Game();
-            this.game.load(game);
-        } else {
-            this.game = game;
-        }
-        if (!game.isLoaded) {
-            this.game.on('loadStart', this.onGameLoadStart.bind(this));
-            this.game.on('loadProgress', this.onGameLoadProgress.bind(this));
-            this.game.on('loadComplete', this.onGameLoadComplete.bind(this));
-        } else {
-            this.onGameLoadComplete();
-        }
-
-
-    };
-
-    Player.prototype.initMatch = function (match) {
-        this.match = match;
-        this.reset();
-        $(window).resize();
-        this.renderMap();
-        this.timeSlider.val(0);
-        this.timeSlider.attr("max", this.match.states.length-1);
-        this.transitionToRound(0);
-        //var maxRound = this.match.states.length-1;
-        //this.roundIndicator.text(Util.zeroPad(0, ("" + maxRound).length) + "/" + maxRound);
-
-    };
-
-    Player.prototype.renderMineList = function (mines) {
-        var mine, gx, gy, px, py;
-        for (var mine in mines) {
-            mine = parseInt(mine);
-            gx = mine % this.match.mapWidth;
-            gy = Math.floor(mine / this.match.mapWidth);
-            px = 1+(this.cellSize * gx);
-            py = 1+(this.cellSize* gy);
-            this.field.drawRect(px, py, this.cellSize-2, this.cellSize-2);
-        }
-    };
-
-    Player.prototype.upgrades = {
-        FUSION: 25,
-        DEFUSION: 25,
-        PICKAXE: 25,
-        VISION: 25,
-        NUKE: 404
-    };
-    Player.prototype.buildTeamStatsPanel = function (team) {
-        var teamInfo = this.game.teams[team];
-        var $panel = $("<div class='teamStatsPanel' id='team-stats-"+team+"'></div>");
-        $panel.css({flex: 1});
-        $panel.append($("<h1 class='team-" + team + "'>" + teamInfo.name + "</h1>"));
-
-        var hqContainer = $("<div style='display: flex; flex-direction: row'></div>");
-        var hqIcon = $("<div class='hqIcon team-" + team + "'></div>");
-        var hqEnergon = $("<div class='energonOuter'><div class='energon'></div></div>");
-        hqIcon.append(hqEnergon);
-        hqContainer.append(hqIcon);
-        var botCounts = $("<div class='botCounts'></div>");
-        var botCountsTbl = $("<table></table>");
-        botCountsTbl.append($('<tr><th class="soldier"></th><td class="soldier">0</td><th class="medbay"></th><td class="medbay">0</td><th class="shields"></th><td class="shields">0</td></tr>'));
-        botCountsTbl.append($('<tr><th class="supplier"></th><td class="supplier">0</td><th class="generator"></th><td class="generator">0</td><th class="artillery"></th><td class="artillery">0</td></tr>'));
-        botCounts.append(botCountsTbl);
-        var progressBar = $("<span class='power-value'>0</span><div class='teamPowerWrapper'><div class='teamPower'></div></div>");
-        botCounts.append(progressBar);
-        hqContainer.append(botCounts);
-        $panel.append(hqContainer);
-        for (var u in this.upgrades) {
-            $panel.append($('<div title="' + u + '" style="display: none" class="upgrade '+ u + '">' +
-                    '<img src="img/' + u.toLowerCase() + '.png" />' +
-                    '<progress value="0" max="' + this.upgrades[u] + '"></progress>' +
-                '</div>'));
-        }
-        return $panel;
-    };
-
-    Player.prototype.buildSelectedBotPanel = function () {
-        this.selectedBotPanel = $(
-            "<div id='selectedBotPanel'>" +
-                "<h1></h1>" +
-                "<div class='selectedBotDetailWrap'>" +
-                    "<div class='botIcon'></div>" +
-                    "<div class='details'></div>" +
-                "</div>" +
-            "<div class='indicatorStrings'></div>" +
-            "</div>");
-        return this.selectedBotPanel;
-    };
-
+    /**
+     * Builds the 'Stats Panel' - a container for the
+     * 'Selected Bot Panel' and 'Team Stats Panels'
+     *
+     * Unlike the build* functions this one appends it to the DOM as well.
+     */
     Player.prototype.initializeStatsPanel = function () {
         $("#statsPanel").remove();
         this.statsPanel = $("<div id='statsPanel'></div>");
@@ -562,8 +648,13 @@ $(function () {
         this.statsPanel.append(this.buildSelectedBotPanel());
     };
 
-    Player.prototype.reset = function () {
 
+    /**
+     * Reset the player
+     *
+     * ugh.
+     */
+    Player.prototype.reset = function () {
         this.initializeStatsPanel();
         this.botSprites = {};
         this.selectedBot = null;
@@ -575,11 +666,12 @@ $(function () {
         this.paused = true;
         this.botSprites = {};
         this.botLayer.removeChildren();
-
-        //this.transitionToRound(0);
-
     };
 
+
+    /**
+     * toggle play/pause state.
+     */
     Player.prototype.togglePlayback = function () {
         if (!this.assetsLoaded) {
             // TODO: They pressed play before
@@ -592,6 +684,14 @@ $(function () {
             .addClass(this.paused ? 'fa-play' : 'fa-pause');
     };
 
+
+    /**
+     * Convert a string location of the format 'x,y' to an integer
+     * representing the index of that location in a 1-dimensional array.
+     *
+     * @param {String} locStr - a location (eg. 10,2)
+     * @returns {Number}
+     */
     Player.prototype.parseLoc = function (locStr) {
         var parts = locStr.split(",");
         var x = parseInt(parts[0]);
@@ -599,6 +699,16 @@ $(function () {
         return (y*this.match.mapWidth) + x;
     };
 
+
+    /**
+     * Transition from the current round to the given round.
+     *
+     * This is called after a round has played
+     * for {@link Player#frameDuration} ms or when
+     * the round is changed manually.
+     *
+     * @param {Number} round - the desired round
+     */
     Player.prototype.transitionToRound = function (round) {
 
         if (round > this.match.states.length-1) {
@@ -626,14 +736,19 @@ $(function () {
                 this.matchState = this.match.states[this.round];
             }
         }
+
         $("#timeSlider").val(this.round);
         var maxRound = this.match.states.length-1;
         this.roundIndicator.text(Util.zeroPad(this.round, ("" + maxRound).length) + "/" + maxRound);
+
         this.updateStatsPanel();
         this.renderMap();
-
     };
 
+
+    /**
+     * Updates all the values in the Stats Panels
+     */
     Player.prototype.updateStatsPanel = function () {
         var counts = {a: {hq: 0, soldier: 0, artillery: 0, generator: 0, shields: 0, medbay: 0, supplier: 0},
                        b: {hq: 0, soldier: 0, artillery: 0, generator: 0, shields: 0, medbay: 0, supplier: 0}};
@@ -647,9 +762,7 @@ $(function () {
             }
         }
 
-
         for (team in {a: true, b: true}) {
-
             var panel = $("#team-stats-" + team);
 
             var wins = this.match.wins[team];
@@ -662,12 +775,11 @@ $(function () {
                 $("h1", panel).append("<i class='fa fa-star'></i>");
             }
 
-            //TODO don't initialize iterator;
-            for (var t in counts[team]) {
-                $("td." + t, panel).text(counts[team][t]);
+            for (var i in counts[team]) {
+                $("td." + i, panel).text(counts[team][i]);
             }
             var val = ((hq[team] ? hq[team].energon : 0) / 500) * 100;
-            var color = Util.toCSSColor(Math.floor(this.getHealthColor(val/100)));
+            var color = Util.toCSSColor(Math.floor(Util.getHealthColor(val/100)));
             $("div.energon", panel).css({width: val + "%", backgroundColor: color});
             var inner = $(".teamPower", panel);
             var max = inner.data("maxPower") || 100;
@@ -682,13 +794,13 @@ $(function () {
         }
 
         this.updateSelectedBotPanel();
-
-
-
     };
 
-    Player.prototype.updateSelectedBotPanel = function () {
 
+    /**
+     * Update the 'Selected Bot Panel'
+     */
+    Player.prototype.updateSelectedBotPanel = function () {
         if (this.selectedBot) {
             var bot = this.matchState.robots[this.selectedBot];
             if (bot) {
@@ -735,9 +847,9 @@ $(function () {
                     lines.push("Shields: " + bot.shields);
                 }
                 lines.push("Bytecodes Used: " + bot.bytecodesUsed);
-                $(".details", this.selectedBotPanel).html(
-                    lines.join("<br />")
-                );
+
+                $(".details", this.selectedBotPanel).html(lines.join("<br />"));
+
                 if (bot.isDead) {
                     $('.botIcon', this.selectedBotPanel).css({backgroundColor: "#FF6666"});
                 }
@@ -749,6 +861,13 @@ $(function () {
 
     };
 
+
+    /**
+     * Called by transitionToRound when it needs to move forward in time.
+     *
+     * @param {MatchState} state - the MatchState to apply.
+     * @param {boolean} animate - whether this transition should be animated or should happen instantly.
+     */
     Player.prototype.applyMatchState = function (state, animate) {
         var ev, cb;
         for (i=0; i<state.delta.length; i++) {
@@ -758,9 +877,15 @@ $(function () {
                 cb.call(this, ev, animate);
             }
         }
-
     };
 
+
+    /**
+     * Called by transitionToRound when it needs to move backward in time.
+     *
+     * @param {MatchState} state - the MatchState to apply.
+     * @param {boolean} animate - whether this transition should be animated or should happen instantly.
+     */
     Player.prototype.undoMatchState = function (state, animate) {
         var ev, cb;
         for (i=0; i<state.delta.length; i++) {
@@ -772,8 +897,9 @@ $(function () {
         }
     };
 
+
     /**
-     * state appliers
+     * callbacks to apply/undo the different game events.
      */
 
     Player.prototype.apply_spawn = function (ev, animate) {
@@ -794,10 +920,12 @@ $(function () {
         this.botLayer.addChild(bot);
     };
 
+
     Player.prototype.undo_spawn = function (ev, animate) {
         this.botLayer.removeChild(this.botSprites[ev.bot.id]);
         delete this.botSprites[ev.bot.id];
     };
+
 
     Player.prototype.apply_research = function (ev, animate) {
         var p = $("#team-stats-" + ev.team + " .upgrade." + ev.upgrade + " progress");
@@ -810,6 +938,7 @@ $(function () {
         p.attr("value", ev.value);
     };
 
+
     Player.prototype.undo_research = function (ev, animate) {
         console.log("Undoing research event", ev);
         var p = $("#team-stats-" + ev.team + " .upgrade." + ev.upgrade + " progress");
@@ -819,9 +948,9 @@ $(function () {
         } else if (parseInt(p.attr("value")) == 1) {
             p.parent().hide();
         }
-
         p.attr("value", ev.value-1);
     };
+
 
     Player.prototype.apply_regen = Player.prototype.undo_regen = function (ev, animate) {
         if (animate) {
@@ -833,6 +962,7 @@ $(function () {
         }
     };
 
+
     Player.prototype.apply_shield = Player.prototype.undo_shield = function (ev, animate) {
         if (animate) {
             this.effectsLayer.lineStyle(0, 0);
@@ -843,8 +973,8 @@ $(function () {
         }
     };
 
-    Player.prototype.apply_attack = Player.prototype.undo_attack = function (ev, animate) {
 
+    Player.prototype.apply_attack = Player.prototype.undo_attack = function (ev, animate) {
         var bot = this.matchState.robots[ev.botId];
         if (bot === undefined) {
             console.log("Couldn't find attacking bot");
@@ -866,13 +996,14 @@ $(function () {
         }
     };
 
+
     Player.prototype.apply_death = function (ev, animate) {
         this.botLayer.removeChild(this.botSprites[ev.bot.id]);
         if (animate) {
             this.createExplosion(ev.bot.pos);
-
         }
     };
+
 
     Player.prototype.undo_death = function (ev, animate) {
         this.botLayer.addChild(this.botSprites[ev.bot.id]);
@@ -881,12 +1012,14 @@ $(function () {
         }
     };
 
+
     Player.prototype.apply_removeDead = function (ev, animate) {
         var bot = this.botSprites[ev.bot.id];
         delete this.botSprites[ev.bot.id];
         this.botLayer.removeChild(bot);
         bot.destroy();
     };
+
 
     Player.prototype.undo_removeDead = function (ev, animate) {
         var bot = new PIXI.Sprite(this.textures[ev.bot.team.toLowerCase()][ev.bot.type.toLowerCase()]);
@@ -906,6 +1039,7 @@ $(function () {
         this.botLayer.addChild(bot);
     };
 
+
     Player.prototype.apply_move = function (ev, animate) {
         var botSprite = this.botSprites[ev.botId];
         if (animate) {
@@ -915,6 +1049,7 @@ $(function () {
         }
         botSprite.rotation = ev.dir;
     };
+
 
     Player.prototype.undo_move = function (ev, animate) {
         var botSprite = this.botSprites[ev.botId];
@@ -928,12 +1063,14 @@ $(function () {
         }
     };
 
+
     Player.prototype.apply_defuseMine = function (ev, animate) {
         var botSprite = this.botSprites[ev.botId];
         if (botSprite) {
             botSprite.rotation = ev.dir;
         }
     };
+
 
     Player.prototype.undo_defuseMine = function (ev, animate) {
         var botSprite = this.botSprites[ev.botId];
@@ -942,22 +1079,12 @@ $(function () {
         }
     };
 
-    Player.prototype.apply_energonChange = function (ev, animate) {
 
-    };
-
-    Player.prototype.undo_energonChange = function (ev, animate) {
-
-    };
-
-    Player.prototype.apply_teamPowerChange = function (ev, animate) {
-        // TODO: Update Stats Panel
-    };
-
-    Player.prototype.undo_teamPowerChange = function (ev, animate) {
-        // TODO: Update Stats Panel
-    };
-
+    /**
+     * Creates an explosion at the given location.
+     *
+     * @param {Object} loc - the location where the explosion should occur
+     */
     Player.prototype.createExplosion = function (loc) {
         var boom = new PIXI.extras.MovieClip(this.boomFrames);
         this.effectsLayer.addChild(boom);
@@ -971,59 +1098,24 @@ $(function () {
             boom.destroy();
         }.bind(this));
         boom.play();
-        //var cfg = $.extend({}, this.explosionConfig);
-        //cfg.emitterLifetime = this.frameDuration / 1000.0;
-        //var emitter = new cloudkid.Emitter(
-        //    this.botLayer,
-        //    [PIXI.Texture.fromImage('img/particle.png')],
-        //    this.explosionConfig);
-        //var pos = this.getCellCenter(loc);
-        //emitter.updateOwnerPos(pos.x, pos.y);
-        //emitter.emit = true;
-        //emitter.resetPositionTracking();
-        //this.roundEmitters.push(emitter);
     };
 
-    Player.prototype.createArtilleryShell = function (from, to) {
-        var cfg = $.extend({}, this.artilleryShellConfig);
-        cfg.emitterLifetime = this.frameDuration / 1000.0;
-        var emitter = new cloudkid.Emitter(
-            this.botLayer,
-            [PIXI.Texture.fromImage('img/particle.png')],
-            cfg);
-        var pos = this.getCellCenter(from);
-        var pos2 = this.getCellCenter(to);
-        emitter.updateOwnerPos(pos.x, pos.y);
-        emitter.emit = true;
-        emitter.resetPositionTracking();
-
-        TweenLite.to(pos,
-            this.frameDuration / 1000.0, {
-                x: pos2.x, y: pos2.y,
-                onUpdate: function () {
-                    if (emitter.ownerPos != null) {
-                        emitter.updateOwnerPos(pos.x, pos.y);
-                    }
-                }
-            }
-        );
-
-        //this.roundEmitters.push(emitter);
-    };
-
+    /**
+     * Converts 'game grid' coordinates to canvas coordinates.
+     *
+     * @param {Object} pt - the point to convert.
+     * @returns {{x: number, y: number}}
+     */
     Player.prototype.getCellCenter = function (pt) {
         return {x: (this.cellSize * pt.x) + (this.cellSize/2),
                 y: (this.cellSize * pt.y) + (this.cellSize/2)};
     };
 
-    Player.prototype.getHealthColor = function (pct) {
-        var g = Math.floor(Math.min(255, pct * 510));
-        var r = Math.floor(Math.min(255, 510 - (pct * 510)));
-        return 256 * 256 * r + 256 * g;
-    };
 
-    var sprite, bot, sel;
-    Player.prototype.updateStatusLayer = function (pct) {
+    /**
+     * Updates the Status Layer
+     */
+    Player.prototype.updateStatusLayer = function () {
         this.statusLayer.clear();
 
         if (this.selectedBot) {
@@ -1035,7 +1127,6 @@ $(function () {
                 this.statusLayer.endFill();
             }
         }
-
 
         if (this.matchState) {
             this.statusLayer.lineStyle(2, 0x000000, 0.8);
@@ -1054,7 +1145,7 @@ $(function () {
             for (bk in this.matchState.robots) {
                 bot = this.matchState.robots[bk];
                 sprite = this.botSprites[bk];
-                this.statusLayer.lineStyle(2, this.getHealthColor(bot.energon / bot.maxEnergon), 0.8);
+                this.statusLayer.lineStyle(2, Util.getHealthColor(bot.energon / bot.maxEnergon), 0.8);
                 this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1,
                                         sprite.position.y + this.halfBotSize);
                 this.statusLayer.lineTo(sprite.position.x - this.halfBotSize + 1 + ((bot.energon / bot.maxEnergon) * (this.botSize - 2)),
@@ -1070,6 +1161,11 @@ $(function () {
         }
     };
 
+    /**
+     * Callback for requestAnimationFrame.
+     *
+     * @param {Number} elapsed time
+     */
     Player.prototype.animate = function (elapsed) {
 
         if (this.paused) {
@@ -1082,7 +1178,7 @@ $(function () {
         }
 
         var delta = (elapsed - this.lastElapsed);
-        //console.log(delta);
+
         if (!this.paused) {
             this.frameTime += (delta);
         }
@@ -1105,6 +1201,10 @@ $(function () {
         }
     };
 
+
+    /**
+     * Renders the mines and encampment squares onto the {@link Player#field} field.
+     */
     Player.prototype.renderMap = function () {
 
         this.field.clear();
@@ -1146,5 +1246,19 @@ $(function () {
             }
         }
     };
+
+
+    Player.prototype.upgrades = {
+        FUSION: 25,
+        DEFUSION: 25,
+        PICKAXE: 25,
+        VISION: 25,
+        NUKE: 404
+    };
+
+
+    Player.prototype.textures = {a: {}, b: {}};
+
+
     window.Player = Player;
 });

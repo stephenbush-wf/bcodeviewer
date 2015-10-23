@@ -1,8 +1,14 @@
 $(function () {
 
     var zeroPad_vs, getRotation_vec, r, g, b;
+
     var Util = {
 
+        /**
+         * Return true if this page has a fullscreen element.
+         *
+         * @return {boolean}
+         */
         isFullscreen: function () {
             return (
                 document.fullscreenElement ||
@@ -12,6 +18,12 @@ $(function () {
             );
         },
 
+
+        /**
+         * Make an element fullscreen
+         *
+         * @param {Object} el - the element to become fullscreen
+         */
         makeFullscreen: function (el) {
             if (el.jquery) {
                 el = el.get(0);
@@ -27,9 +39,11 @@ $(function () {
             }
         },
 
-        cancelFullscreen: function () {
 
-            // exit full-screen
+        /**
+         * un-fullscreen
+         */
+        cancelFullscreen: function () {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
             } else if (document.webkitExitFullscreen) {
@@ -39,21 +53,42 @@ $(function () {
             } else if (document.msExitFullscreen) {
                 document.msExitFullscreen();
             }
-
         },
-        zeroPad: function (v, s) {
+
+
+        /**
+         * Pad a number with zeroes.
+         *
+         * @param {*} v - the number or string to pad
+         * @param {Number} l - the desired length;
+         * @return {String}
+         */
+        zeroPad: function (v, l) {
             zeroPad_vs = v.toString();
-            while (zeroPad_vs.length < s) {
+            while (zeroPad_vs.length < l) {
                 zeroPad_vs = "0" + zeroPad_vs;
             }
             return zeroPad_vs;
         },
 
 
+        /**
+         * Convert a string to Title Case
+         * @param {string} str - the string to titlecase
+         * @returns {string}
+         */
         titleCase: function (str) {
             return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
         },
 
+
+        /**
+         * Convert a possibly negative angle in radians to one
+         * which is guaranteed positive.
+         *
+         * @param {Number} r - angle in radians
+         * @returns {Number}
+         */
         truncRadians: function (r) {
             while (r < 0) {
                 r += Math.PI * 2;
@@ -61,74 +96,49 @@ $(function () {
             return r;
         },
 
+
+        /**
+         * Get the angle in radians from one point to another.
+         *
+         * @param {Object} p1 - the 'from' point
+         * @param {Object} p1 - the 'to' point
+         * @returns {*|Number}
+         */
         getRotation: function (p1, p2) {
             getRotation_vec = {x: p2.x - p1.x, y: p2.y - p1.y};
             return this.truncRadians(Math.atan2(getRotation_vec.y, getRotation_vec.x)); // - (Math.PI / 2));
         },
 
+
+        /**
+         * Converts a color from an integer to a css-friendly hex string.
+         *
+         * @param {Number} num - the integer color value
+         * @returns {string}
+         */
         toCSSColor: function (num) {
             num >>>= 0;
             b = num & 0xFF;
             g = (num & 0xFF00) >>> 8;
             r = (num & 0xFF0000) >>> 16;
             return '#' + this.zeroPad(r.toString(16), 2) + "" + this.zeroPad(g.toString(16), 2) + "" + this.zeroPad(b.toString(16), 2);
+        },
+
+
+        /**
+         * Returns a color somewhere between green and red based on
+         * a float value between 0 and 1
+         *
+         * @param {Number} value - must be between 0.0 and 1.0
+         * @returns {Number}
+         */
+        getHealthColor: function (value) {
+            var g = Math.floor(Math.min(255, value * 510));
+            var r = Math.floor(Math.min(255, 510 - (value * 510)));
+            return 256 * 256 * r + 256 * g;
         }
     };
 
+
     window.Util = Util;
 });
-
-
-/**
- *
- * jquery.binarytransport.js
- *
- * @description. jQuery ajax transport for making binary data type requests.
- * @version 1.0
- * @author Henry Algus <henryalgus@gmail.com>
- *
- */
-
-(function($, undefined) {
-    "use strict";
-
-    // use this transport for "binary" data type
-    $.ajaxTransport("+binary", function(options, originalOptions, jqXHR) {
-        // check for conditions and support for blob / arraybuffer response type
-        if (window.FormData && ((options.dataType && (options.dataType == 'binary')) || (options.data && ((window.ArrayBuffer && options.data instanceof ArrayBuffer) || (window.Blob && options.data instanceof Blob))))) {
-            return {
-                // create new XMLHttpRequest
-                send: function(headers, callback) {
-                    // setup all variables
-                    var xhr = new XMLHttpRequest(),
-                        url = options.url,
-                        type = options.type,
-                        async = options.async || true,
-                    // blob or arraybuffer. Default is blob
-                        dataType = options.responseType || "blob",
-                        data = options.data || null,
-                        username = options.username || null,
-                        password = options.password || null;
-
-                    xhr.addEventListener('load', function() {
-                        var data = {};
-                        data[options.dataType] = xhr.response;
-                        // make callback and send data
-                        callback(xhr.status, xhr.statusText, data, xhr.getAllResponseHeaders());
-                    });
-
-                    xhr.open(type, url, async, username, password);
-
-                    // setup custom headers
-                    for (var i in headers) {
-                        xhr.setRequestHeader(i, headers[i]);
-                    }
-
-                    xhr.responseType = dataType;
-                    xhr.send(data);
-                },
-                abort: function() {}
-            };
-        }
-    });
-})(window.jQuery);
