@@ -320,7 +320,7 @@ $(function () {
         $('.botIcon', this.selectedBotPanel)
             .empty()
             .append("<div class='energonOuter'><div class='energon'></div></div>");
-
+        $('#selectedBotPanel').show();
         this.updateSelectedBotPanel();
     };
 
@@ -575,7 +575,7 @@ $(function () {
      */
     Player.prototype.buildSelectedBotPanel = function () {
         this.selectedBotPanel = $(
-            "<div id='selectedBotPanel'>" +
+            "<div id='selectedBotPanel' style='display: none;'>" +
                 "<h1></h1>" +
                 "<div class='selectedBotDetailWrap'>" +
                     "<div class='botIcon'></div>" +
@@ -911,8 +911,13 @@ $(function () {
         bot.anchor.y = 0.5;
         bot.pivot.x = 0.5;
         bot.pivot.y = 0.5;
-        bot.width = this.botSize;
-        bot.height = this.botSize;
+        if (ev.bot.type =='hq') {
+            bot.width = this.botSize * 1.5;
+            bot.height = this.botSize * 1.5;
+        } else {
+            bot.width = this.botSize;
+            bot.height = this.botSize;
+        }
         bot.location = ev.bot.pos;
         bot.position = this.getCellCenter(ev.bot.pos);
         bot.rotation = ev.bot.dir;
@@ -1030,8 +1035,13 @@ $(function () {
         bot.anchor.y = 0.5;
         bot.pivot.x = 0.5;
         bot.pivot.y = 0.5;
-        bot.width = this.cellSize;
-        bot.height = this.cellSize;
+        if (ev.bot.type =='hq') {
+            bot.width = this.botSize * 1.5;
+            bot.height = this.botSize * 1.5;
+        } else {
+            bot.width = this.botSize;
+            bot.height = this.botSize;
+        }
         bot.location = ev.bot.pos;
         bot.position = this.getCellCenter(ev.bot.pos);
         bot.rotation = ev.bot.dir;

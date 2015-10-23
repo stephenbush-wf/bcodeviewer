@@ -594,6 +594,7 @@ $(function () {
      * @param {Object} fileInput - a browser file input element.
      */
     Game.prototype.loadFile = function (fileInput) {
+        this.emit('loadStart');
         var file = fileInput.files[0];
         var reader = new FileReader();
         reader.onload = function (f) {
