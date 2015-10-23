@@ -94,7 +94,7 @@ $(function () {
         this.renderer = PIXI.autoDetectRenderer(
             $(this.canvasContainer).width(),
             $(this.canvasContainer).height(),
-            {antialias: false, transparent: true, autoResize: true});
+            {antialias: false, transparent: true, autoResize: true, resolution: 2});
 
         /**
          * the PIXI InteractionManager
