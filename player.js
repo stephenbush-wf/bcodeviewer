@@ -10,11 +10,27 @@ $(function () {
     var bk, i, sprite, bot, sel, delta;
     var mine, gx, gy, px, py;
 
+    var teamPowerMax, teamPower, teamPowerInner, teamPowerPct;
+
+    var ax, ay, av, ak;
+
+    var deltaEvent, stateCallback;
+
+    var statsCounts, statsTeam, statsPanelHQ;
+    var researchMax;
+    var projectileX, projectileY;
+
     var val, color, wins;
     var pos;
     var panel;
+    var parts;
 
+    var selectedBotHPPct
 
+    var lines, attackingStr;
+    var src, dest;
+    var applyIter, undoIter;
+    var currentRound, maxRound;
     /**
      * Creates the BattleCode Game Viewer.
      *
@@ -288,7 +304,7 @@ $(function () {
      *
      * @param {Object} e - change event
      */
-    Player.prototype.onSpeedSliderChange = function (e) {
+    Player.prototype.onSpeedSliderChange = function (we) {
 
         var pct = (this.speedSlider.val()/100.0);
         this.frameDuration = FRAME_DURATION - (FRAME_DURATION * pct);
@@ -401,8 +417,8 @@ $(function () {
         this.halfBotSize = this.botSize / 2;
 
         if (this.matchState) {
-            var sprite, bot;
-            for (var bk in this.matchState.robots) {
+            sprite, bot;
+            for (bk in this.matchState.robots) {
                 bot = this.matchState.robots[bk];
                 sprite = this.botSprites[bk];
                 sprite.width = this.botSize;
@@ -460,7 +476,7 @@ $(function () {
         }
 
         this.matchSelector.empty();
-        for (var i=0; i<this.game.matches.length; i++) {
+        for (i=0; i<this.game.matches.length; i++) {
             var mapName = this.game.matches[i].mapName;
             if (mapName.substring(mapName.length-4).toLowerCase() == '.xml') {
                 mapName = mapName.substring(0, mapName.length-4);
@@ -523,9 +539,8 @@ $(function () {
      * @param {Object} mines - keys are integers mapping to locations, values are 'true'
      */
     Player.prototype.renderMineList = function (mines) {
-        var mine, gx, gy, px, py;
-        for (var mine in mines) {
-            mine = parseInt(mine);
+
+        for (mine in mines) {
             gx = mine % this.match.mapWidth;
             gy = Math.floor(mine / this.match.mapWidth);
             px = 1+(this.cellSize * gx);
@@ -698,10 +713,8 @@ $(function () {
      * @returns {Number}
      */
     Player.prototype.parseLoc = function (locStr) {
-        var parts = locStr.split(",");
-        var x = parseInt(parts[0]);
-        var y = parseInt(parts[1]);
-        return (y*this.match.mapWidth) + x;
+        parts = locStr.split(",");
+        return (this.match.mapWidth * parts[0]) + parts[1];
     };
 
 
@@ -720,30 +733,30 @@ $(function () {
             return;
         }
         this.effectsLayer.clear();
-        var currentRound = this.round;
-        var newState = null;
+        currentRound = this.round;
+
         if (round == currentRound) {
             //TODO: No-op?
         } else if (round > currentRound) {
             // Go Forward.
-            for (var i=currentRound+1; i<=round; i++) {
+            for (applyIter=currentRound+1; applyIter<=round; applyIter++) {
                 //console.log("Applying state " + this.round + " -> " + i);
-                this.round = i;
+                this.round = applyIter;
                 this.matchState = this.match.states[this.round];
-                this.applyMatchState(this.matchState, round == i);
+                this.applyMatchState(this.matchState, round == applyIter);
             }
         } else {
             // Go backwards.
-            for (var i=currentRound-1; i>=round; i--) {
+            for (undoIter=currentRound-1; undoIter>=round; undoIter--) {
                 //console.log("Undoing state " + this.round + " -> " + i);
-                this.undoMatchState(this.matchState, round == i);
-                this.round = i;
+                this.undoMatchState(this.matchState, round == undoIter);
+                this.round = undoIter;
                 this.matchState = this.match.states[this.round];
             }
         }
 
         $("#timeSlider").val(this.round);
-        var maxRound = this.match.states.length-1;
+        maxRound = this.match.states.length-1;
         this.roundIndicator.text(Util.zeroPad(this.round, ("" + maxRound).length) + "/" + maxRound);
 
         this.updateStatsPanel();
@@ -755,23 +768,23 @@ $(function () {
      * Updates all the values in the Stats Panels
      */
     Player.prototype.updateStatsPanel = function () {
-        var counts = {a: {hq: 0, soldier: 0, artillery: 0, generator: 0, shields: 0, medbay: 0, supplier: 0},
+        statsCounts = {a: {hq: 0, soldier: 0, artillery: 0, generator: 0, shields: 0, medbay: 0, supplier: 0},
                        b: {hq: 0, soldier: 0, artillery: 0, generator: 0, shields: 0, medbay: 0, supplier: 0}};
 
-        var hq = {a: null, b: null};
-        for (var bk in this.matchState.robots) {
+        statsPanelHQ = {a: null, b: null};
+        for (bk in this.matchState.robots) {
             bot = this.matchState.robots[bk];
-            counts[bot.team][bot.type] ++;
+            statsCounts[bot.team][bot.type] ++;
             if (bot.type == 'hq') {
-                hq[bot.team] = bot;
+                statsPanelHQ[bot.team] = bot;
             }
         }
 
-        for (team in {a: true, b: true}) {
-            panel = $("#team-stats-" + team);
+        for (statsTeam in {a: true, b: true}) {
+            panel = $("#team-stats-" + statsTeam);
 
-            wins = this.match.wins[team];
-            if (this.round == this.match.states.length-1 && this.match.winner == team) {
+            wins = this.match.wins[statsTeam];
+            if (this.round == this.match.states.length-1 && this.match.winner == statsTeam) {
                 wins += 1;
             }
             $("h1 i", panel).remove();
@@ -780,22 +793,22 @@ $(function () {
                 $("h1", panel).append("<i class='fa fa-star'></i>");
             }
 
-            for (i in counts[team]) {
-                $("td." + i, panel).text(counts[team][i]);
+            for (i in statsCounts[statsTeam]) {
+                $("td." + i, panel).text(statsCounts[statsTeam][i]);
             }
-            val = ((hq[team] ? hq[team].energon : 0) / 500) * 100;
+            val = ((statsPanelHQ[statsTeam] ? statsPanelHQ[statsTeam].energon : 0) / 500) * 100;
             color = Util.toCSSColor(Math.floor(Util.getHealthColor(val/100)));
             $("div.energon", panel).css({width: val + "%", backgroundColor: color});
-            var inner = $(".teamPower", panel);
-            var max = inner.data("maxPower") || 100;
-            var power = Math.floor(this.matchState.power[team]);
-            if (power > max) {
-                max = power;
-                inner.data("maxPower", max);
+            teamPowerInner = $(".teamPower", panel);
+            teamPowerMax = teamPowerInner.data("maxPower") || 100;
+            teamPower = Math.floor(this.matchState.power[statsTeam]);
+            if (teamPower > teamPowerMax) {
+                teamPowerMax = teamPower;
+                teamPowerInner.data("maxPower", teamPowerMax);
             }
-            var pct = Math.floor((power/max)*100);
-            inner.css({width: "" + pct + "%"});
-            $("span.power-value", panel).text(power);
+            teamPowerPct = Math.floor((teamPower/teamPowerMax)*100);
+            teamPowerInner.css({width: "" + teamPowerPct + "%"});
+            $("span.power-value", panel).text(teamPower);
         }
 
         this.updateSelectedBotPanel();
@@ -811,9 +824,9 @@ $(function () {
             if (bot) {
                 $("#selectedBotPanel .botIcon").css({backgroundImage: "url(img/" + bot.type + "-" + bot.team + "-lg.png)", backgroundColor: 'transparent'});
                 $('.botIcon .energonOuter', this.selectedBotPanel).show();
-                var hpPct = Math.floor((bot.energon / bot.maxEnergon) * 100);
-                var color = Util.toCSSColor(Math.floor(Util.getHealthColor(hpPct/100)));
-                $("#selectedBotPanel .energon").css({width: hpPct + "%", backgroundColor: color});
+                selectedBotHPPct = Math.floor((bot.energon / bot.maxEnergon) * 100);
+                color = Util.toCSSColor(Math.floor(Util.getHealthColor(selectedBotHPPct/100)));
+                $("#selectedBotPanel .energon").css({width: selectedBotHPPct + "%", backgroundColor: color});
                 $("#selectedBotPanel h1").text("#" + bot.id + "[" + Util.titleCase(bot.type) + "]");
 
                 $(".indicatorStrings", this.selectedBotPanel)
@@ -822,14 +835,13 @@ $(function () {
                     .append("<span>" + bot.indicatorStrings[1] + "</span><br/>")
                     .append("<span>" + bot.indicatorStrings[2] + "</span>");
 
-                var attackingStr = "";
-                var x, y, v;
-                for (var k in bot.attacking) {
-                    v = parseInt(k);
-                    x = v % this.match.mapWidth;
-                    y = Math.floor(v / this.match.mapWidth);
-                    if (bot.attacking[k]) {
-                        attackingStr += "(" + x + "," + y + "), ";
+                attackingStr = "";
+
+                for (ak in bot.attacking) {
+                    ax = ak % this.match.mapWidth;
+                    ay = Math.floor(ak / this.match.mapWidth);
+                    if (bot.attacking[ak]) {
+                        attackingStr += "(" + ax + "," + ay + "), ";
                     }
                 }
 
@@ -837,7 +849,7 @@ $(function () {
                     attackingStr = attackingStr.substring(0, attackingStr.length-2);
                 }
 
-                var lines = [
+                lines = [
                     "Position: " + bot.pos.x + ", " + bot.pos.y
                 ];
 
@@ -874,12 +886,12 @@ $(function () {
      * @param {boolean} animate - whether this transition should be animated or should happen instantly.
      */
     Player.prototype.applyMatchState = function (state, animate) {
-        var ev, cb;
+
         for (i=0; i<state.delta.length; i++) {
-            ev = state.delta[i];
-            cb = this['apply_' + ev.event];
-            if (cb) {
-                cb.call(this, ev, animate);
+            deltaEvent = state.delta[i];
+            stateCallback = this['apply_' + deltaEvent.event];
+            if (stateCallback) {
+                stateCallback.call(this, deltaEvent, animate);
             }
         }
     };
@@ -892,12 +904,12 @@ $(function () {
      * @param {boolean} animate - whether this transition should be animated or should happen instantly.
      */
     Player.prototype.undoMatchState = function (state, animate) {
-        var ev, cb;
+
         for (i=0; i<state.delta.length; i++) {
-            ev = state.delta[i];
-            cb = this['undo_' + ev.event];
-            if (cb) {
-                cb.call(this, ev, animate);
+            deltaEvent = state.delta[i];
+            stateCallback = this['undo_' + deltaEvent.event];
+            if (stateCallback) {
+                stateCallback.call(this, deltaEvent, animate);
             }
         }
     };
@@ -933,29 +945,29 @@ $(function () {
 
     Player.prototype.undo_spawn = function (ev, animate) {
         this.botLayer.removeChild(this.botSprites[ev.bot.id]);
+        this.botSprites[ev.bot.id].destroy();
         delete this.botSprites[ev.bot.id];
     };
 
 
     Player.prototype.apply_research = function (ev, animate) {
-        var p = $("#team-stats-" + ev.team + " .upgrade." + ev.upgrade + " progress");
-        var max = parseInt(p.attr("max"));
-        if (max == ev.value) {
-            p.addClass("complete");
+        panel = $("#team-stats-" + ev.team + " .upgrade." + ev.upgrade + " progress");
+        researchMax = panel.attr("max");
+        if (researchMax == ev.value) {
+            panel.addClass("complete");
         } else if (ev.value == 1) {
-            p.parent().show();
+            panel.parent().show();
         }
-        p.attr("value", ev.value);
+        panel.attr("value", ev.value);
     };
 
 
     Player.prototype.undo_research = function (ev, animate) {
-        console.log("Undoing research event", ev);
         panel = $("#team-stats-" + ev.team + " .upgrade." + ev.upgrade + " progress");
-        var max = parseInt(panel.attr("max"));
-        if (max == parseInt(panel.attr("value"))) {
+        researchMax = panel.attr("max");
+        if (researchMax == panel.attr("value")) {
             panel.removeClass("complete");
-        } else if (parseInt(panel.attr("value")) == 1) {
+        } else if (panel.attr("value") == 1) {
             panel.parent().hide();
         }
         panel.attr("value", ev.value-1);
@@ -991,13 +1003,12 @@ $(function () {
         }
 
         if (bot.type == 'artillery') {
-            var color = bot.team == 'a' ? 0xFF6666 : 0x6666FF;
+            color = bot.team == 'a' ? 0xFF6666 : 0x6666FF;
             this.effectsLayer.lineStyle(this.cellSize < 16 ? 2 : 3, color, 0.5);
-            var src = this.getCellCenter(bot.pos);
-            var x = ev.target % this.match.mapWidth;
-            var y = Math.floor(ev.target / this.match.mapWidth);
-            var dest = this.getCellCenter({x: x, y: y});
-            console.log("Drawing artliiery Fire (" + bot.pos + ") -> (" + ev.target + ")");
+            src = this.getCellCenter(bot.pos);
+            projectileX = ev.target % this.match.mapWidth;
+            projectileY = Math.floor(ev.target / this.match.mapWidth);
+            dest = this.getCellCenter({x: projectileX, y: projectileY});
             this.effectsLayer.moveTo(src.x, src.y);
             this.effectsLayer.lineTo(dest.x, dest.y);
             this.effectsLayer.beginFill(color, 0.5);
