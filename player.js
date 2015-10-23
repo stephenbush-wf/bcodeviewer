@@ -807,7 +807,7 @@ $(function () {
                 $("#selectedBotPanel .botIcon").css({backgroundImage: "url(img/" + bot.type + "-" + bot.team + "-lg.png)", backgroundColor: 'transparent'});
                 $('.botIcon .energonOuter', this.selectedBotPanel).show();
                 var hpPct = Math.floor((bot.energon / bot.maxEnergon) * 100);
-                var color = Util.toCSSColor(Math.floor(this.getHealthColor(hpPct/100)));
+                var color = Util.toCSSColor(Math.floor(Util.getHealthColor(hpPct/100)));
                 $("#selectedBotPanel .energon").css({width: hpPct + "%", backgroundColor: color});
                 $("#selectedBotPanel h1").text("#" + bot.id + "[" + Util.titleCase(bot.type) + "]");
 
