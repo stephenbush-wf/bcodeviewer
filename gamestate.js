@@ -33,6 +33,18 @@ $(function () {
 
 
     /**
+     * Check if the given team has fully researched Vision.
+     *
+     * @param team
+     * @returns {boolean}
+     */
+    MatchState.prototype.hasVision = function (team) {
+        var val = this.research[team].VISION;
+        return val >= 25;
+    };
+
+
+    /**
      * Creates a Match.
      *
      * @constructor

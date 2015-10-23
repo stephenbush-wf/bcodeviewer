@@ -20,6 +20,8 @@ $(function () {
     var researchMax;
     var projectileX, projectileY;
 
+    var fogBotIdx;
+
     var val, color, wins;
     var pos;
     var panel;
@@ -45,6 +47,13 @@ $(function () {
          */
         this.container = $(container);
         this.container.empty();
+
+        /**
+         * The team (a or b) whose vision is displayed.
+         *
+         * @member {String} visionTeam
+         */
+        this.visionTeam = null;
 
         /**
          * have the textures loaded yet?
@@ -109,6 +118,13 @@ $(function () {
         this.statusLayer = new PIXI.Graphics();
 
         /**
+         * the fog layer.
+         *
+         * @member {PIXI.Grapics} fogLayer;
+         */
+        this.fogLayer = new PIXI.Graphics();
+
+        /**
          * the PIXI renderer
          * @member {*|WebGLRenderer|CanvasRenderer} renderer
          */
@@ -135,6 +151,7 @@ $(function () {
         this.stage.addChild(this.botLayer);
         this.stage.addChild(this.statusLayer);
         this.stage.addChild(this.effectsLayer);
+        this.stage.addChild(this.fogLayer);
 
         this.canvasContainer.append(this.renderer.view);
         $(window).on('resize', '', this.onResize.bind(this));
@@ -304,7 +321,7 @@ $(function () {
      *
      * @param {Object} e - change event
      */
-    Player.prototype.onSpeedSliderChange = function (we) {
+    Player.prototype.onSpeedSliderChange = function (e) {
 
         var pct = (this.speedSlider.val()/100.0);
         this.frameDuration = FRAME_DURATION - (FRAME_DURATION * pct);
@@ -315,6 +332,11 @@ $(function () {
         }
     };
 
+
+    Player.prototype.onVisionSelectorChange = function (ev) {
+        this.visionTeam = this.visionSelector.val();
+        this.renderFog();
+    };
 
     /**
      * called when the user clicks on a robot.
@@ -465,6 +487,64 @@ $(function () {
         }.bind(this), 1);
     };
 
+    Player.prototype.calculateFog = function (team) {
+        var visibleCells = {};
+        var visionRadius = 3;
+
+        if (this.matchState.hasVision(team)) {
+            visionRadius = 5;
+        }
+
+        for (bk in this.matchState.robots) {
+            bot = this.matchState.robots[bk];
+            if (bot.team == team) {
+                fogBotIdx = (this.match.mapWidth * bot.pos.y) + bot.pos.x;
+                $.extend(visibleCells, this.getVisibleCells(bot.pos, visionRadius));
+            }
+        }
+        return visibleCells;
+    };
+
+    Player.prototype.getVisibleCells = function (pos, radius) {
+        var results = {};
+        var minX = Math.max(0, pos.x - radius);
+        var maxX = Math.min(this.match.mapWidth-1, pos.x + radius);
+        var minY = Math.max(0, pos.y - radius);
+        var maxY = Math.min(this.match.mapHeight-1, pos.y + radius);
+        var _minY, _maxY;
+        if (radius == 3) {
+            for (var x = minX; x <= maxX; x++) {
+                if (x == pos.x - radius || x == pos.x + radius) {
+                    _minY = minY + 1;
+                    _maxY = maxY - 1;
+                } else {
+                    _minY = minY;
+                    _maxY = maxY;
+                }
+                for (var y = _minY; y <= _maxY; y++) {
+                    results[(y * this.match.mapWidth) + x] = true;
+                }
+            }
+            return results;
+        } else {
+            for (var x = minX; x <= maxX; x++) {
+                if (x == pos.x - radius || x == pos.x + radius) {
+                    _minY = minY + 3;
+                    _maxY = maxY - 3;
+                } else if (x < (pos.x - radius) + 3 || x > pos.x + radius - 3) {
+                    _minY = minY + 1;
+                    _maxY = maxY - 1;
+                } else {
+                    _minY = minY;
+                    _maxY = maxY;
+                }
+                for (var y = _minY; y <= _maxY; y++) {
+                    results[(y * this.match.mapWidth) + x] = true;
+                }
+            }
+            return results;
+        }
+    };
 
     /**
      * Called when the Game is fully loaded and parsed.
@@ -483,6 +563,12 @@ $(function () {
             }
             this.matchSelector.append("<option value='" + i + "'>" + i + ". " + mapName + "</option>");
         }
+
+        this.visionSelector.empty();
+        this.visionSelector.append($("<option value=''>-Vision-</option>"));
+        this.visionSelector.append($("<option value='a'>" + this.game.teams.a.name + "</option>"));
+        this.visionSelector.append($("<option value='b'>" + this.game.teams.b.name + "</option>"));
+
         this.initMatch(this.game.matches[0]);
     };
 
@@ -625,6 +711,12 @@ $(function () {
         this.goBackButton = $("<button  title='Go to previous round' id='goBackButton'><i class='fa fa-backward'></i></button>");
         this.speedIndicator= $("<div id='speedIndicator'>75%</div>");
         this.fullscreenButton = $("<button title='Toggle Fullscreen' id='fullscreenButton'><i class='fa fa-arrows-alt'></i></button>");
+        this.visionSelector = $("<select id='visionSelector'>" +
+            "<option value=''>-Vision-</option>" +
+            "<option value='a' style='color: #FF0000'>Team A</option>" +
+            "<option value='b' style='color: #FF0000'>Team B</option>" +
+
+        "</select>");
 
         this.timeSlider.on('change input', '', this.onTimeSliderChange.bind(this));
         this.gotoStartButton.on('click', this.onGotoStartButton.bind(this));
@@ -632,6 +724,10 @@ $(function () {
         this.goBackButton.on('click', this.onGoBackButton.bind(this));
         this.goForwardButton.on('click', this.onGoForwardButton.bind(this));
         this.fullscreenButton.on('click', this.onFullscreenButton.bind(this));
+        this.visionSelector.on('change', this.onVisionSelectorChange.bind(this));
+        this.matchSelector.on('change', '', this.onMatchSelectorChange.bind(this));
+        this.speedSlider.on('change input', '', this.onSpeedSliderChange.bind(this));
+        this.playPauseButton.on('click', '', this.togglePlayback.bind(this));
 
         this.header.append(this.matchSelector);
         this.header.append(this.gotoStartButton);
@@ -643,12 +739,11 @@ $(function () {
         this.header.append(this.roundIndicator);
         this.header.append(this.speedSlider);
         this.header.append(this.speedIndicator);
+        this.header.append(this.visionSelector);
         this.header.append(this.fullscreenButton);
 
-        this.matchSelector.on('change', '', this.onMatchSelectorChange.bind(this));
-        this.speedSlider.on('change input', '', this.onSpeedSliderChange.bind(this));
         this.speedSlider.change();
-        this.playPauseButton.on('click', '', this.togglePlayback.bind(this));
+
         return this.header;
     };
 
@@ -761,8 +856,26 @@ $(function () {
 
         this.updateStatsPanel();
         this.renderMap();
+        this.renderFog();
     };
 
+
+    Player.prototype.renderFog = function () {
+        this.fogLayer.clear();
+        if (this.visionTeam) {
+            this.fogLayer.beginFill(0x000000, 0.666);
+            var visibleCells = this.calculateFog(this.visionTeam);
+            var gx, gy;
+            for (i = 0; i < this.match.mapWidth * this.match.mapHeight; i++) {
+                if (!visibleCells[i]) {
+                    gx = i % this.match.mapWidth;
+                    gy = Math.floor(i / this.match.mapWidth);
+                    this.fogLayer.drawRect(gx * this.cellSize, gy * this.cellSize, this.cellSize, this.cellSize);
+                }
+            }
+            this.fogLayer.endFill();
+        }
+    };
 
     /**
      * Updates all the values in the Stats Panels
