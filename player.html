@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <script type="text/javascript" src="lib/jquery.js"></script>
+    <script type="text/javascript" src="lib/gunzip.min.js"></script>
+    <script type="text/javascript" src="lib/EventEmitter.min.js"></script>
+    <script type="text/javascript" src="lib/TweenLite.min.js"></script>
+    <script type="text/javascript" src="lib/pixi.js"></script>
+    <script type="text/javascript" src="lib/pixi-particles.js"></script>
+    <script type="text/javascript" src="util.js"></script>
+    <script type="text/javascript" src="gamestate.js"></script>
+    <script type="text/javascript" src="player.js"></script>
+    <script>
+        $(function () {
+            if (location.hash.length > 1) {
+                var game = new Game();
+                player = new Player($('.wrapper'));
+                player.loadGame(game);
+                game.loadUrl(location.hash.substring(1));
+            } else {
+                $(".wrapper input[type='submit']").on('click', function (evt) {
+                    evt.preventDefault();
+                    var fileInput = $(".wrapper input[type='file']").get(0);
+                    var urlInput = $(".wrapper input[type='text']").get(0);
+                    var game = new Game();
+                    player = new Player($('.wrapper'));
+                    player.loadGame(game);
+                    if (fileInput.files.length > 0) {
+                        game.loadFile(fileInput);
+                    } else {
+                        game.loadUrl($(urlInput).val());
+                    }
+
+                });
+            }
+        });
+
+    </script>
+    <style>
+
+        html, body {
+            height: 100%;
+            margin: 0px;
+            position: relative;
+            font-family: sans-serif;
+            background-color: white;
+        }
+
+        .botCounts table {
+            width: 100%;
+        }
+
+        .teamStatsPanel .upgrade img {
+            width: 32px;
+            height: 32px;
+            margin-bottom: -12px;
+        }
+
+        .teamStatsPanel .upgrade {
+            max-width: 40px;
+            text-align: center;
+            float: left;
+        }
+
+        .teamStatsPanel .upgrade progress {
+            width: 38px;
+            background-color: #666;
+            height: 6px;
+        }
+        .teamStatsPanel .upgrade progress::-moz-progress-bar {
+            background-color: #009c00;
+        }
+        .teamStatsPanel .upgrade progress::-webkit-progress-value {
+            background-color: #009c00;
+        }
+
+        .teamStatsPanel .upgrade progress::-webkit-progress-bar {
+            background-color: #666;
+        }
+
+        .teamStatsPanel .upgrade progress.complete::-webkit-progress-value {
+            background-color: lime;
+        }
+        .teamStatsPanel .upgrade progress.complete::-moz-progress-bar {
+            background-color: lime;
+        }
+
+        .teamPowerWrapper {
+            width: 100%;
+            height: 20px;
+        }
+        .teamPower {
+            height: 20px;
+        }
+        #team-stats-a .teamPower { background-color: #FF6666; }
+        #team-stats-b .teamPower { background-color: #6666FF; }
+        .power-value {
+            text-shadow: 0px 0px 4px white;
+            float: right;
+            font-weight: bold;
+            margin-right: 4px;
+        }
+        #loadDialog {
+            border-radius: 5px;
+            border: 1px solid #999;
+            box-shadow: 0px 0px 5px black;
+            text-align: center;
+            padding: 10px;
+            background-color: white;
+        }
+
+        #loadDialog progress {
+            width: 100%;
+        }
+
+        .botCounts th {
+            width: 16px;
+            height: 16px;
+            min-width: 16px;
+            min-height: 16px;
+            max-width: 16px;
+            max-height: 16px;
+            background-size: 16px 16px;
+            background-repeat: no-repeat;
+        }
+        #team-stats-a .botCounts th.soldier { background-image: url(img/soldier-a.png); }
+        #team-stats-a .botCounts th.artillery { background-image: url(img/artillery-a.png); }
+        #team-stats-a .botCounts th.supplier { background-image: url(img/supplier-a.png); }
+        #team-stats-a .botCounts th.generator { background-image: url(img/generator-a.png); }
+        #team-stats-a .botCounts th.medbay { background-image: url(img/medbay-a.png); }
+        #team-stats-a .botCounts th.shields { background-image: url(img/shields-a.png); }
+
+        #team-stats-b .botCounts th.soldier { background-image: url(img/soldier-b.png); }
+        #team-stats-b .botCounts th.artillery { background-image: url(img/artillery-b.png); }
+        #team-stats-b .botCounts th.supplier { background-image: url(img/supplier-b.png); }
+        #team-stats-b .botCounts th.generator { background-image: url(img/generator-b.png); }
+        #team-stats-b .botCounts th.medbay { background-image: url(img/medbay-b.png); }
+        #team-stats-b .botCounts th.shields { background-image: url(img/shields-b.png); }
+
+        .teamStatsPanel .hqIcon { background-position: center; overflow: hidden; position: relative; flex: 1; min-height: 64px; background-size: contain; background-repeat: no-repeat}
+        .teamStatsPanel .hqIcon.team-a { background-image: url(img/hq-a.png); }
+        .teamStatsPanel .hqIcon.team-b { background-image: url(img/hq-b.png); }
+        .selectedBotDetailWrap {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .teamStatsPanel .energonOuter,#selectedBotPanel .energonOuter {
+            position:absolute;
+            top: 0px;
+            left: 0px;
+            right: 0px;
+            height: 6px;
+            background: black;
+            box-shadow: 0px 0px 32px black;
+
+        }
+
+        .teamStatsPanel .energon, #selectedBotPanel .energon {
+            width: 100%;
+            height: 6px;
+            background: lime;
+        }
+
+        .botCounts td {
+            color: black;
+            font-weight: bolder;
+            font-size: 16px;
+            width: 33%;
+        }
+        .botCounts td.powerContainer {
+            width: 100%;
+            height: 20px;
+            background-color: brown;
+        }
+
+        .team-a {
+            color: red;
+        }
+
+        .team-b {
+            color: blue;
+        }
+
+        #selectedBotPanel {
+            padding: 5px;
+            min-height: 92px;
+            max-width: 250px;
+            margin: 5px;
+            border: 1px solid #ccc;
+
+        }
+
+        .indicatorStrings {
+            font-size: 10px;
+        }
+
+        #selectedBotPanel .botIcon {
+            overflow: hidden;
+            max-height: 64px;
+            min-height: 64px;
+            min-width: 64px;
+            max-width: 64px;
+            background-position: center;
+            background-size: contain;
+            position: relative;
+        }
+
+        #selectedBotPanel .details {
+            flex: 1;
+            padding: 0px 5px;
+            font-size: 12px;
+        }
+
+        .teamStatsPanel {
+            max-width: 250px;
+            min-height: 92px;
+            border: 1px solid #ccc;
+            padding: 5px;
+            margin: 5px;
+        }
+
+        #statsPanel h1 {
+            font-size: 16px;
+            text-align: center;
+            margin-top: 0px;
+            margin-bottom: 5px;
+            background: #ccc;
+        }
+
+        #statsPanel h1 i.fa {
+            color: #FFFF00;
+            float: right;
+            margin-right: 3px;
+            line-height: 19px;
+            text-shadow: 0px 0px 3px black;
+        }
+
+        .teamStatsPanel .botCounts {
+            flex: 2;
+        }
+
+        .teamStatsPanel .imgWrap {
+            flex: 1
+        }
+
+        .wrapper {
+            display: flex;
+            flex-flow: column;
+            height: 100%;
+
+        }
+
+        .noselect {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        #header button {
+            height: 24px;
+            border: 1px solid #ccc;
+            background-color: rgb(248, 248, 248);
+            border-radius: 4px;
+            flex-basis: content;
+            outline: none;
+        }
+
+        #header {
+            display: flex;
+            flex-direction: row;
+        }
+
+        #timeSlider {
+            flex: 10;
+        }
+
+        #speedSlider {
+            flex: 1;
+        }
+
+        #header div {
+            flex: 0;
+            flex-basis: auto;
+            main-size: auto auto;
+            font-family: monospace;
+            padding-left: 2px;
+            padding-right: 2px;
+            vertical-align: middle;
+            line-height: 24px;
+        }
+
+        #matchSelector {
+            flex: 0;
+            flex-basis: auto;
+            main-size: auto;
+            padding-left: 2px;
+            padding-right: 2px;
+            display: block;
+            border: 1px solid #ccc;
+            background-color: rgb(248, 248, 248);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        #canvasContainer {
+            flex-direction: row;
+            display: flex;
+            flex-flow: wrap;
+            flex-grow: 10;
+            flex-shrink: 0;
+            margin-bottom: 0px;
+        }
+
+    </style>
+</head>
+    <body>
+    <div class="wrapper noselect">
+        <h2>WebGL BattleCode Match Viewer</h2>
+        <p>Upload a .rms file generated by the battlecode server or paste a URL to a match file.</p>
+        <p><input type="file" /><br />
+            <input type="text" /></p>
+        <p><input type="submit" value="Play"></p>
+    </div>
+    </body>
+</html>
