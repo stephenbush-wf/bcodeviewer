@@ -8,6 +8,11 @@ $(function () {
     // Temporary variables to avoid
     // constant allocation;
     var bk, i, sprite, bot, sel, delta;
+    var mine, gx, gy, px, py;
+
+    var val, color, wins;
+    var pos;
+    var panel;
 
 
     /**
@@ -763,9 +768,9 @@ $(function () {
         }
 
         for (team in {a: true, b: true}) {
-            var panel = $("#team-stats-" + team);
+            panel = $("#team-stats-" + team);
 
-            var wins = this.match.wins[team];
+            wins = this.match.wins[team];
             if (this.round == this.match.states.length-1 && this.match.winner == team) {
                 wins += 1;
             }
@@ -775,11 +780,11 @@ $(function () {
                 $("h1", panel).append("<i class='fa fa-star'></i>");
             }
 
-            for (var i in counts[team]) {
+            for (i in counts[team]) {
                 $("td." + i, panel).text(counts[team][i]);
             }
-            var val = ((hq[team] ? hq[team].energon : 0) / 500) * 100;
-            var color = Util.toCSSColor(Math.floor(Util.getHealthColor(val/100)));
+            val = ((hq[team] ? hq[team].energon : 0) / 500) * 100;
+            color = Util.toCSSColor(Math.floor(Util.getHealthColor(val/100)));
             $("div.energon", panel).css({width: val + "%", backgroundColor: color});
             var inner = $(".teamPower", panel);
             var max = inner.data("maxPower") || 100;
@@ -946,14 +951,14 @@ $(function () {
 
     Player.prototype.undo_research = function (ev, animate) {
         console.log("Undoing research event", ev);
-        var p = $("#team-stats-" + ev.team + " .upgrade." + ev.upgrade + " progress");
-        var max = parseInt(p.attr("max"));
-        if (max == parseInt(p.attr("value"))) {
-            p.removeClass("complete");
-        } else if (parseInt(p.attr("value")) == 1) {
-            p.parent().hide();
+        panel = $("#team-stats-" + ev.team + " .upgrade." + ev.upgrade + " progress");
+        var max = parseInt(panel.attr("max"));
+        if (max == parseInt(panel.attr("value"))) {
+            panel.removeClass("complete");
+        } else if (parseInt(panel.attr("value")) == 1) {
+            panel.parent().hide();
         }
-        p.attr("value", ev.value-1);
+        panel.attr("value", ev.value-1);
     };
 
 
@@ -961,7 +966,7 @@ $(function () {
         if (animate) {
             this.effectsLayer.lineStyle(0, 0);
             this.effectsLayer.beginFill(0x66FF66, 0.5);
-            var pos = this.getCellCenter(ev.loc);
+            pos = this.getCellCenter(ev.loc);
             this.effectsLayer.drawCircle(pos.x, pos.y, this.cellSize * 1.5);
             this.effectsLayer.endFill();
         }
@@ -972,7 +977,7 @@ $(function () {
         if (animate) {
             this.effectsLayer.lineStyle(0, 0);
             this.effectsLayer.beginFill(0x66FFFF, 0.5);
-            var pos = this.getCellCenter(ev.loc);
+            pos = this.getCellCenter(ev.loc);
             this.effectsLayer.drawCircle(pos.x, pos.y, this.cellSize * 1.5);
             this.effectsLayer.endFill();
         }
@@ -1151,7 +1156,7 @@ $(function () {
                 this.statusLayer.lineTo(sprite.position.x + this.halfBotSize - 1, sprite.position.y + this.halfBotSize);
 
             }
-            var hp;
+
             for (bk in this.matchState.robots) {
                 bot = this.matchState.robots[bk];
                 sprite = this.botSprites[bk];
@@ -1239,8 +1244,8 @@ $(function () {
             this.field.lineStyle(1, 0x009900, 0.8);
 
             // render encampments.
-            var mine, gx, gy, px, py;
-            for (var mine in this.matchState.encampments) {
+
+            for (mine in this.matchState.encampments) {
                 gx = mine % this.match.mapWidth;
                 gy = Math.floor(mine / this.match.mapWidth);
                 px = (this.cellSize * gx);
