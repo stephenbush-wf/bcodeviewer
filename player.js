@@ -33,6 +33,8 @@ $(function () {
     var src, dest;
     var applyIter, undoIter;
     var currentRound, maxRound;
+
+
     /**
      * Creates the BattleCode Game Viewer.
      *
@@ -41,6 +43,7 @@ $(function () {
      */
     var Player = function (container) {
 
+        console.log('pixelratio', window.devicePixelRatio);
         /**
          * The container for the entire player
          * @member {jQuery} container
@@ -131,7 +134,7 @@ $(function () {
         this.renderer = PIXI.autoDetectRenderer(
             $(this.canvasContainer).width(),
             $(this.canvasContainer).height(),
-            {antialias: false, transparent: true, autoResize: true, resolution: 2});
+            {antialias: false, transparent: true, autoResize: true, resolution: window.devicePixelRatio});
 
         /**
          * the PIXI InteractionManager
@@ -515,8 +518,8 @@ $(function () {
         if (radius == 3) {
             for (var x = minX; x <= maxX; x++) {
                 if (x == pos.x - radius || x == pos.x + radius) {
-                    _minY = minY + 1;
-                    _maxY = maxY - 1;
+                    _minY = pos.y - radius + 1;
+                    _maxY = pos.y + radius - 1;
                 } else {
                     _minY = minY;
                     _maxY = maxY;
@@ -529,11 +532,11 @@ $(function () {
         } else {
             for (var x = minX; x <= maxX; x++) {
                 if (x == pos.x - radius || x == pos.x + radius) {
-                    _minY = minY + 3;
-                    _maxY = maxY - 3;
+                    _minY = pos.y - radius + 3;
+                    _maxY = pos.y + radius - 3;
                 } else if (x < (pos.x - radius) + 3 || x > pos.x + radius - 3) {
-                    _minY = minY + 1;
-                    _maxY = maxY - 1;
+                    _minY = pos.y - radius + 1;
+                    _maxY = pos.y + radius - 1;
                 } else {
                     _minY = minY;
                     _maxY = maxY;
@@ -1272,29 +1275,33 @@ $(function () {
             for (bk in this.matchState.robots) {
                 sprite = this.botSprites[bk];
                 bot = this.matchState.robots[bk];
-                if (bot.action) {
-                    this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1, sprite.position.y + this.halfBotSize - 2);
-                    this.statusLayer.lineTo(sprite.position.x + this.halfBotSize - 1, sprite.position.y + this.halfBotSize - 2);
+                if (!bot.isDead) {
+                    if (bot.action) {
+                        this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1, sprite.position.y + this.halfBotSize - 2);
+                        this.statusLayer.lineTo(sprite.position.x + this.halfBotSize - 1, sprite.position.y + this.halfBotSize - 2);
+                    }
+                    this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1, sprite.position.y + this.halfBotSize);
+                    this.statusLayer.lineTo(sprite.position.x + this.halfBotSize - 1, sprite.position.y + this.halfBotSize);
                 }
-                this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1, sprite.position.y + this.halfBotSize);
-                this.statusLayer.lineTo(sprite.position.x + this.halfBotSize - 1, sprite.position.y + this.halfBotSize);
 
             }
 
             for (bk in this.matchState.robots) {
                 bot = this.matchState.robots[bk];
                 sprite = this.botSprites[bk];
-                this.statusLayer.lineStyle(2, Util.getHealthColor(bot.energon / bot.maxEnergon), 0.8);
-                this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1,
-                                        sprite.position.y + this.halfBotSize);
-                this.statusLayer.lineTo(sprite.position.x - this.halfBotSize + 1 + ((bot.energon / bot.maxEnergon) * (this.botSize - 2)),
-                                        sprite.position.y + this.halfBotSize);
-                if (bot.action) {
-                    this.statusLayer.lineStyle(2, 0x00AAFF, 0.8);
+                if (!bot.isDead) {
+                    this.statusLayer.lineStyle(2, Util.getHealthColor(bot.energon / bot.maxEnergon), 0.8);
                     this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1,
-                                            sprite.position.y + this.halfBotSize - 2);
-                    this.statusLayer.lineTo(sprite.position.x - this.halfBotSize + 1 + (((bot.actionRoundsTotal - bot.actionRounds) / bot.actionRoundsTotal) * (this.botSize - 2)),
-                                            sprite.position.y + this.halfBotSize - 2);
+                        sprite.position.y + this.halfBotSize);
+                    this.statusLayer.lineTo(sprite.position.x - this.halfBotSize + 1 + ((bot.energon / bot.maxEnergon) * (this.botSize - 2)),
+                        sprite.position.y + this.halfBotSize);
+                    if (bot.action) {
+                        this.statusLayer.lineStyle(2, 0x00AAFF, 0.8);
+                        this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1,
+                            sprite.position.y + this.halfBotSize - 2);
+                        this.statusLayer.lineTo(sprite.position.x - this.halfBotSize + 1 + (((bot.actionRoundsTotal - bot.actionRounds) / bot.actionRoundsTotal) * (this.botSize - 2)),
+                            sprite.position.y + this.halfBotSize - 2);
+                    }
                 }
             }
         }
