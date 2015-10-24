@@ -409,7 +409,7 @@ $(function () {
                 'boxSizing': 'border-box',
                 left: this.canvasContainer.offset().left + this.boardWidth,
                 top: this.canvasContainer.offset().top,
-                width: this.canvasContainer.width() - this.boardWidth,
+                //width: this.canvasContainer.width() - this.boardWidth,
                 height: this.boardHeight,
                 flexDirection: 'column'
             });
@@ -1432,6 +1432,9 @@ $(function () {
                 }
                 if (this.cellSize > 18) {
                     this.field.drawRect(px + 9, py + 9, this.cellSize - 18, this.cellSize -18);
+                }
+                if (this.cellSize > 22) {
+                    this.field.drawRect(px + 11, py + 11, this.cellSize - 22, this.cellSize -22);
                 }
             }
         }
