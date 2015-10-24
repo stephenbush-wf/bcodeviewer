@@ -463,6 +463,8 @@ $(function () {
             this.positionStatsPanel();
         }
 
+        this.renderMap();
+        this.renderFog();
         console.log("Initialized " + this.boardWidth + "x" + this.boardHeight +
                     " canvas and " + this.cellSize + "px cell size");
     };
