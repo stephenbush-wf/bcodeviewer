@@ -685,30 +685,53 @@ $(function () {
     Player.prototype.buildTeamStatsPanel = function (team) {
         var teamInfo = this.game.teams[team];
         var $panel = $("<div class='teamStatsPanel' id='team-stats-"+team+"'></div>");
-        $panel.css({flex: 1});
         $panel.append($("<h1 class='team-" + team + "'>" + teamInfo.name + "</h1>"));
 
-        var hqContainer = $("<div style='display: flex; flex-direction: row'></div>");
+        var tbl = $("<table class='teamStats'></table>");
+        var row1 = $('<tr>' +
+                '<td rowspan="3" class="hqCell"></td>' +
+                '<th class="soldier"></th>' +
+                '<td class="soldier">0</td>' +
+                '<th class="medbay"></th>' +
+                '<td class="medbay">0</td>' +
+                '<th class="shields"></th>' +
+                '<td class="shields">0</td>' +
+            '</tr>');
+        var row2 = $('<tr>' +
+                '<th class="supplier"></th>' +
+                '<td class="supplier">0</td>' +
+                '<th class="generator"></th>' +
+                '<td class="generator">0</td>' +
+                '<th class="artillery"></th>' +
+                '<td class="artillery">0</td>' +
+            '</tr>');
+        var row3 = $('<tr>' +
+            '<td colspan="6" class="teamPower"></td>' +
+            '</tr>');
+        var row4 = $('<tr class="upgradesRow" style="display: none">' +
+            '<td colspan="7" class="upgrades"></td>' +
+            '</tr>');
+        var row5 = $("<tr class='starsRow' style='display: none'><td colspan='7' class='stars'></td></tr>");
+
+        tbl.append(row1);
+        tbl.append(row2);
+        tbl.append(row3);
+        tbl.append(row4);
+        tbl.append(row5);
         var hqIcon = $("<div class='hqIcon team-" + team + "'></div>");
         var hqEnergon = $("<div class='energonOuter'><div class='energon'></div></div>");
         hqIcon.append(hqEnergon);
-        hqContainer.append(hqIcon);
-        var botCounts = $("<div class='botCounts'></div>");
-        var botCountsTbl = $("<table></table>");
-        botCountsTbl.append($('<tr><th class="soldier"></th><td class="soldier">0</td><th class="medbay"></th><td class="medbay">0</td><th class="shields"></th><td class="shields">0</td></tr>'));
-        botCountsTbl.append($('<tr><th class="supplier"></th><td class="supplier">0</td><th class="generator"></th><td class="generator">0</td><th class="artillery"></th><td class="artillery">0</td></tr>'));
-        botCounts.append(botCountsTbl);
+        $('td.hqCell', tbl).append(hqIcon);
         var progressBar = $("<span class='power-value'>0</span><div class='teamPowerWrapper'><div class='teamPower'></div></div>");
-        botCounts.append(progressBar);
-        hqContainer.append(botCounts);
-        $panel.append(hqContainer);
+        $('td.teamPower', tbl).append(progressBar);
+        $panel.append(tbl);
+
         for (var u in this.upgrades) {
-            $panel.append($('<div title="' + u + '" style="display: none" class="upgrade '+ u + '">' +
-                    '<img src="img/' + u.toLowerCase() + '.png" />' +
+            $('td', row4).append($('<div title="' + u + '" style="display: none" class="upgrade '+ u + '">' +
                     '<progress value="0" max="' + this.upgrades[u] + '"></progress>' +
-                '</div>'));
+            '</div>'));
         }
-        $panel.append($("<div class='stars'></div>"));
+
         return $panel;
     };
 
@@ -721,8 +744,8 @@ $(function () {
      */
     Player.prototype.buildSelectedBotPanel = function () {
         this.selectedBotPanel = $(
-            "<div id='selectedBotPanel' style='display: none;'>" +
-                "<h1></h1>" +
+            "<div id='selectedBotPanel'>" +
+                "<h1>no robot selected</h1>" +
                 "<div class='selectedBotDetailWrap'>" +
                     "<div class='botIcon'></div>" +
                     "<div class='details'></div>" +
@@ -942,9 +965,11 @@ $(function () {
             if (this.round == this.match.states.length-1 && this.match.winner == statsTeam) {
                 wins += 1;
             }
-            $("div.stars i", panel).remove();
+            $("td.stars i", panel).remove();
+            $('tr.starsRow', panel).hide();
             for (i=0; i<wins; i++) {
-                $('div.stars', panel).append("<i class='fa fa-star'></i>");
+                $('tr.starsRow', panel).show();
+                $('td.stars', panel).append("<i class='fa fa-star'></i>");
             }
 
             for (i in statsCounts[statsTeam]) {
@@ -953,7 +978,7 @@ $(function () {
             val = ((statsPanelHQ[statsTeam] ? statsPanelHQ[statsTeam].energon : 0) / 500) * 100;
             color = Util.toCSSColor(Math.floor(Util.getHealthColor(val/100)));
             $("div.energon", panel).css({width: val + "%", backgroundColor: color});
-            teamPowerInner = $(".teamPower", panel);
+            teamPowerInner = $("div.teamPower", panel);
             teamPowerMax = teamPowerInner.data("maxPower") || 100;
             teamPower = Math.floor(this.matchState.power[statsTeam]);
             if (teamPower > teamPowerMax) {
@@ -1105,26 +1130,33 @@ $(function () {
 
 
     Player.prototype.apply_research = function (ev, animate) {
-        panel = $("#team-stats-" + ev.team + " .upgrade." + ev.upgrade + " progress");
-        researchMax = panel.attr("max");
+        panel = $("#team-stats-" + ev.team);
+        var progressBar = $(".upgrade." + ev.upgrade + " progress", panel);
+        researchMax = progressBar.attr("max");
         if (researchMax == ev.value) {
-            panel.addClass("complete");
+            progressBar.addClass("complete");
         } else if (ev.value == 1) {
-            panel.parent().show();
+            progressBar.parent().show();
+            $('tr.upgradesRow', panel).show();
         }
-        panel.attr("value", ev.value);
+        progressBar.attr("value", ev.value);
     };
 
 
     Player.prototype.undo_research = function (ev, animate) {
-        panel = $("#team-stats-" + ev.team + " .upgrade." + ev.upgrade + " progress");
-        researchMax = panel.attr("max");
-        if (researchMax == panel.attr("value")) {
-            panel.removeClass("complete");
-        } else if (panel.attr("value") == 1) {
-            panel.parent().hide();
+        panel = $("#team-stats-" + ev.team);
+        var progressBar = $(".upgrade." + ev.upgrade + " progress");
+        researchMax = progressBar.attr("max");
+        if (researchMax == progressBar.attr("value")) {
+            progressBar.removeClass("complete");
+        } else if (progressBar.attr("value") == 1) {
+
+            progressBar.parent().hide();
+            if ($('div.upgrade:visible', panel).length == 0) {
+                $('tr.upgradesRow', panel).hide();
+            }
         }
-        panel.attr("value", ev.value-1);
+        progressBar.attr("value", ev.value-1);
     };
 
 

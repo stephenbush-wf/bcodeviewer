@@ -56,43 +56,50 @@
             max-height: 24px;
             margin: 0px 5px;
         }
-        .botCounts table {
+        table.teamStats {
             width: 100%;
             border: 1px solid silver;
             border-collapse: collapse;
         }
-        .botCounts table td, .botCounts table th {
+        table.teamStats td, table.teamStats th {
             border: 1px solid silver;
             text-align: center;
             background-position: center center;
         }
-        .botCounts table td {
+        table.teamStats td {
             border-left: none;
         }
-        .botCounts table th {
+        table.teamStats th {
             border-right: none;
-        }
-        .teamStatsPanel .upgrade img {
-            width: 32px;
-            margin-bottom: -12px;
         }
 
         .teamStatsPanel .upgrade {
-            border-radius: 3px;
-            background-color: #f0f0f0;
-            box-shadow: 2px 2px 2px #666;
-            margin: 3px;
-            padding: 0px 3px 3px 3px;
             width: 32px;
+            height: 32px;
+            position: relative;
             text-align: center;
-            float: left;
+            display: inline-block;
+            margin: 0px 2px;
+            background-position: center center;
+            background-size: contain;
         }
 
         .teamStatsPanel .upgrade progress {
-            width: 30px;
+            position: absolute;
+            bottom: 0px;
+            left:0px;
+            right:0px;
+            width: 32px;
             background-color: #666;
-            height: 6px;
+            height: 4px;
+            margin: 1px;
         }
+
+        .teamStatsPanel .upgrade.DEFUSION { background-image: url(img/defusion.png); }
+        .teamStatsPanel .upgrade.FUSION{ background-image: url(img/fusion.png); }
+        .teamStatsPanel .upgrade.NUKE { background-image: url(img/nuke.png); }
+        .teamStatsPanel .upgrade.VISION { background-image: url(img/vision.png); }
+        .teamStatsPanel .upgrade.PICKAXE{ background-image: url(img/pickaxe.png); }
 
         .teamStatsPanel .upgrade progress::-moz-progress-bar {
             background-color: #009c00;
@@ -114,11 +121,10 @@
 
         .teamPowerWrapper {
             height: 20px;
-            border: 1px solid silver;
-            border-top: none;
+            width: 100%;
         }
 
-        .teamPower {
+        div.teamPower {
             height: 20px;
             background-color: #FEC232;
         }
@@ -147,11 +153,12 @@
             background-position: center center;
             background-repeat: no-repeat;
         }
+        
         #loadDialog progress {
             width: 100%;
         }
 
-        .botCounts th {
+        .teamStats th {
             width: 16px;
             height: 16px;
             min-width: 16px;
@@ -161,19 +168,19 @@
             background-size: 16px 16px;
             background-repeat: no-repeat;
         }
-        #team-stats-a .botCounts th.soldier { background-image: url(img/soldier-a.png); }
-        #team-stats-a .botCounts th.artillery { background-image: url(img/artillery-a.png); }
-        #team-stats-a .botCounts th.supplier { background-image: url(img/supplier-a.png); }
-        #team-stats-a .botCounts th.generator { background-image: url(img/generator-a.png); }
-        #team-stats-a .botCounts th.medbay { background-image: url(img/medbay-a.png); }
-        #team-stats-a .botCounts th.shields { background-image: url(img/shields-a.png); }
+        #team-stats-a table.teamStats th.soldier { background-image: url(img/soldier-a.png); }
+        #team-stats-a table.teamStats th.artillery { background-image: url(img/artillery-a.png); }
+        #team-stats-a table.teamStats th.supplier { background-image: url(img/supplier-a.png); }
+        #team-stats-a table.teamStats th.generator { background-image: url(img/generator-a.png); }
+        #team-stats-a table.teamStats th.medbay { background-image: url(img/medbay-a.png); }
+        #team-stats-a table.teamStats th.shields { background-image: url(img/shields-a.png); }
 
-        #team-stats-b .botCounts th.soldier { background-image: url(img/soldier-b.png); }
-        #team-stats-b .botCounts th.artillery { background-image: url(img/artillery-b.png); }
-        #team-stats-b .botCounts th.supplier { background-image: url(img/supplier-b.png); }
-        #team-stats-b .botCounts th.generator { background-image: url(img/generator-b.png); }
-        #team-stats-b .botCounts th.medbay { background-image: url(img/medbay-b.png); }
-        #team-stats-b .botCounts th.shields { background-image: url(img/shields-b.png); }
+        #team-stats-b table.teamStats th.soldier { background-image: url(img/soldier-b.png); }
+        #team-stats-b table.teamStats th.artillery { background-image: url(img/artillery-b.png); }
+        #team-stats-b table.teamStats th.supplier { background-image: url(img/supplier-b.png); }
+        #team-stats-b table.teamStats th.generator { background-image: url(img/generator-b.png); }
+        #team-stats-b table.teamStats th.medbay { background-image: url(img/medbay-b.png); }
+        #team-stats-b table.teamStats th.shields { background-image: url(img/shields-b.png); }
 
         .teamStatsPanel .hqIcon { background-position: center; overflow: hidden; position: relative; flex: 1; min-height: 64px; background-size: contain; background-repeat: no-repeat}
         .teamStatsPanel .hqIcon.team-a { background-image: url(img/hq-a.png); }
@@ -183,6 +190,7 @@
             flex-direction: row;
         }
 
+        table.teamStats td.upgrades { text-align: left; }
         .teamStatsPanel .energonOuter,#selectedBotPanel .energonOuter {
             position:absolute;
             top: 0px;
@@ -200,13 +208,13 @@
             background: lime;
         }
 
-        .botCounts td {
+        table.teamStats td {
             color: black;
             font-weight: bolder;
             font-size: 16px;
-            width: 33%;
+            width: 25%;
         }
-        .botCounts td.powerContainer {
+        table.teamStats td.powerContainer {
             width: 100%;
             height: 20px;
             background-color: brown;
@@ -250,12 +258,12 @@
 
         }
 
-
         .teamStatsPanel {
             position: relative;
             min-height: 92px;
             border: 1px solid #ccc;
             padding: 5px;
+            flex: 1;
         }
 
         .vertical>div {
@@ -279,7 +287,6 @@
         }
 
         #statsPanel h1 {
-            position: relative;
             font-size: 16px;
             padding: 4px 0px;
             text-align: center;
@@ -296,13 +303,8 @@
         #team-stats-a h1 { background-color: #FF0000; }
         #team-stats-b h1 { background-color: #0000FF; }
 
-        #statsPanel div.stars {
-            position: absolute;
-            left: 5px;
-            bottom: 5px;
-        }
-
-        #statsPanel div.stars i.fa-star {
+        
+        #statsPanel td.stars i.fa-star {
             color: #FFFF00;
             margin-left: 3px;
             font-size: 20px;
