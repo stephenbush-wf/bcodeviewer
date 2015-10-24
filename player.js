@@ -939,7 +939,7 @@ $(function () {
             }
             $("div.stars i", panel).remove();
             for (i=0; i<wins; i++) {
-                $('div.stars').append("<i class='fa fa-star'></i>");
+                $('div.stars', panel).append("<i class='fa fa-star'></i>");
             }
 
             for (i in statsCounts[statsTeam]) {
