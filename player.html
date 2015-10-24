@@ -58,8 +58,20 @@
         }
         .botCounts table {
             width: 100%;
+            border: 1px solid silver;
+            border-collapse: collapse;
         }
-
+        .botCounts table td, .botCounts table th {
+            border: 1px solid silver;
+            text-align: center;
+            background-position: center center;
+        }
+        .botCounts table td {
+            border-left: none;
+        }
+        .botCounts table th {
+            border-right: none;
+        }
         .teamStatsPanel .upgrade img {
             width: 32px;
             height: 32px;
@@ -96,14 +108,16 @@
         }
 
         .teamPowerWrapper {
-            width: 100%;
+            margin-right: 1px;
             height: 20px;
+            border: 1px solid silver;
+            border-top: none;
         }
         .teamPower {
             height: 20px;
+            background-color: #FEC232;
         }
-        #team-stats-a .teamPower { background-color: #FF6666; }
-        #team-stats-b .teamPower { background-color: #6666FF; }
+
         .power-value {
             text-shadow: 0px 0px 4px white;
             float: right;
@@ -196,8 +210,6 @@
             flex: 1;
             padding: 5px;
             min-height: 92px;
-
-            margin: 5px;
             border: 1px solid #ccc;
 
         }
@@ -224,32 +236,63 @@
 
         }
 
+
         .teamStatsPanel {
 
             min-height: 92px;
             border: 1px solid #ccc;
             padding: 5px;
-            margin: 5px;
+        }
+
+        .vertical>div {
+            margin-left: 5px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .horizontal>div {
+            margin-top: 5px;
+            margin-bottom: 5px;
+            margin-right: 5px;
+        }
+
+        .vertical>div:last-child {
+            margin-bottom: 0px;
+        }
+
+        .horizontal>div:last-child {
+            margin-right: 0px;
         }
 
         #statsPanel h1 {
             position: relative;
             font-size: 16px;
+            padding: 4px 0px;
             text-align: center;
             margin-top: 0px;
             margin-bottom: 5px;
-            background: #ccc;
+            color: white;
+            text-shadow: 0px 0px 2px black;
+            background-image: url(img/gradient.png);
+            background-color: black;
+            background-size: auto 100%;
+            background-repeat: repeat-x;
         }
+
+        #team-stats-a h1 { background-color: #FF0000; }
+        #team-stats-b h1 { background-color: #0000FF; }
+
         #statsPanel div.stars {
             position: absolute;
-            top: 0px;
-            right: 0px;
+            left: 5px;
+            bottom: 5px;
         }
 
         #statsPanel div.stars i.fa-star {
             color: #FFFF00;
-            margin-right: 3px;
-            line-height: 19px;
+            margin-left: 3px;
+            font-size: 20px;
+            line-height: 24px;
             text-shadow: 0px 0px 3px black;
         }
 
@@ -321,6 +364,7 @@
             background-color: rgb(248, 248, 248);
             border-radius: 4px;
             outline: none;
+            font-family: monospace;
         }
 
         #canvasContainer {

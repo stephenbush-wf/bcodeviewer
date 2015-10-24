@@ -390,6 +390,7 @@ $(function () {
             console.log("Stats At Bottom!");
             this.statsHorizontal = true;
             this.statsVertical = false;
+            this.statsPanel.removeClass("vertical").addClass("horizontal");
             var top = this.canvasContainer.offset().top + this.boardHeight;
             this.statsPanel.css({
                 'boxSizing': 'border-box',
@@ -402,6 +403,7 @@ $(function () {
         } else {
             this.statsHorizontal = false;
             this.statsVertical = true;
+            this.statsPanel.removeClass("horizontal").addClass("vertical");
             console.log("Stats At Side!");
             this.statsPanel.css({
                 'boxSizing': 'border-box',
@@ -682,7 +684,7 @@ $(function () {
         var teamInfo = this.game.teams[team];
         var $panel = $("<div class='teamStatsPanel' id='team-stats-"+team+"'></div>");
         $panel.css({flex: 1});
-        $panel.append($("<h1 class='team-" + team + "'><span id='team-name'>" + teamInfo.name + "</span><div class='stars'></div></h1>"));
+        $panel.append($("<h1 class='team-" + team + "'>" + teamInfo.name + "</h1>"));
 
         var hqContainer = $("<div style='display: flex; flex-direction: row'></div>");
         var hqIcon = $("<div class='hqIcon team-" + team + "'></div>");
@@ -704,6 +706,7 @@ $(function () {
                     '<progress value="0" max="' + this.upgrades[u] + '"></progress>' +
                 '</div>'));
         }
+        $panel.append($("<div class='stars'></div>"));
         return $panel;
     };
 
