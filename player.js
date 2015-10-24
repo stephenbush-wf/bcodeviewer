@@ -1296,9 +1296,9 @@ $(function () {
             this.statusLayer.lineStyle(0,0,0);
 
             sel = this.botSprites[this.selectedBot];
-            hbs = sel.type == 'hq' ? (this.BotSize * 1.5) / 2 : this.halfBotSize;
 
             if (sel) {
+                hbs = sel.type == 'hq' ? (this.BotSize * 1.5) / 2 : this.halfBotSize;
                 this.statusLayer.beginFill(0xFFCC00, 0.75);
                 this.statusLayer.drawRect(sel.x - hbs, sel.y - hbs, hbs * 2, hbs * 2);
                 this.statusLayer.endFill();
