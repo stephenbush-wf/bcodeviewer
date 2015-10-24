@@ -27,6 +27,8 @@ $(function () {
     var panel;
     var parts;
 
+    var hbs;
+
     var selectedBotHPPct
 
     var lines, attackingStr;
@@ -446,8 +448,14 @@ $(function () {
             for (bk in this.matchState.robots) {
                 bot = this.matchState.robots[bk];
                 sprite = this.botSprites[bk];
-                sprite.width = this.botSize;
-                sprite.height = this.botSize;
+                if (bot.type == 'hq') {
+                    sprite.width = this.botSize * 1.5;
+                    sprite.height = this.botSize * 1.5;
+                } else {
+                    sprite.width = this.botSize;
+                    sprite.height = this.botSize;
+                }
+
                 TweenLite.killTweensOf(sprite.position);
                 sprite.position = this.getCellCenter(bot.pos);
             }
@@ -1262,10 +1270,13 @@ $(function () {
 
         if (this.selectedBot) {
             this.statusLayer.lineStyle(0,0,0);
+
             sel = this.botSprites[this.selectedBot];
+            hbs = sel.type == 'hq' ? (this.BotSize * 1.5) / 2 : this.halfBotSize;
+
             if (sel) {
                 this.statusLayer.beginFill(0xFFCC00, 0.75);
-                this.statusLayer.drawRect(sel.x - this.halfBotSize, sel.y - this.halfBotSize, this.botSize, this.botSize);
+                this.statusLayer.drawRect(sel.x - hbs, sel.y - hbs, hbs * 2, hbs * 2);
                 this.statusLayer.endFill();
             }
         }
@@ -1275,13 +1286,14 @@ $(function () {
             for (bk in this.matchState.robots) {
                 sprite = this.botSprites[bk];
                 bot = this.matchState.robots[bk];
+                hbs = bot.type == 'hq' ? (this.botSize * 1.5) / 2 : this.halfBotSize;
                 if (!bot.isDead) {
                     if (bot.action) {
-                        this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1, sprite.position.y + this.halfBotSize - 2);
-                        this.statusLayer.lineTo(sprite.position.x + this.halfBotSize - 1, sprite.position.y + this.halfBotSize - 2);
+                        this.statusLayer.moveTo(sprite.position.x - hbs + 1, sprite.position.y + hbs - 2);
+                        this.statusLayer.lineTo(sprite.position.x + hbs - 1, sprite.position.y + hbs - 2);
                     }
-                    this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1, sprite.position.y + this.halfBotSize);
-                    this.statusLayer.lineTo(sprite.position.x + this.halfBotSize - 1, sprite.position.y + this.halfBotSize);
+                    this.statusLayer.moveTo(sprite.position.x - hbs + 1, sprite.position.y + hbs);
+                    this.statusLayer.lineTo(sprite.position.x + hbs - 1, sprite.position.y + hbs);
                 }
 
             }
@@ -1289,18 +1301,19 @@ $(function () {
             for (bk in this.matchState.robots) {
                 bot = this.matchState.robots[bk];
                 sprite = this.botSprites[bk];
+                hbs = bot.type == 'hq' ? (this.botSize * 1.5) / 2 : this.halfBotSize;
                 if (!bot.isDead) {
                     this.statusLayer.lineStyle(2, Util.getHealthColor(bot.energon / bot.maxEnergon), 0.8);
-                    this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1,
-                        sprite.position.y + this.halfBotSize);
-                    this.statusLayer.lineTo(sprite.position.x - this.halfBotSize + 1 + ((bot.energon / bot.maxEnergon) * (this.botSize - 2)),
-                        sprite.position.y + this.halfBotSize);
+                    this.statusLayer.moveTo(sprite.position.x - hbs + 1,
+                        sprite.position.y + hbs);
+                    this.statusLayer.lineTo(sprite.position.x - hbs + 1 + ((bot.energon / bot.maxEnergon) * ((hbs * 2) - 2)),
+                        sprite.position.y + hbs);
                     if (bot.action) {
                         this.statusLayer.lineStyle(2, 0x00AAFF, 0.8);
-                        this.statusLayer.moveTo(sprite.position.x - this.halfBotSize + 1,
-                            sprite.position.y + this.halfBotSize - 2);
-                        this.statusLayer.lineTo(sprite.position.x - this.halfBotSize + 1 + (((bot.actionRoundsTotal - bot.actionRounds) / bot.actionRoundsTotal) * (this.botSize - 2)),
-                            sprite.position.y + this.halfBotSize - 2);
+                        this.statusLayer.moveTo(sprite.position.x - hbs + 1,
+                            sprite.position.y + hbs - 2);
+                        this.statusLayer.lineTo(sprite.position.x - hbs + 1 + (((bot.actionRoundsTotal - bot.actionRounds) / bot.actionRoundsTotal) * ((hbs * 2) - 2)),
+                            sprite.position.y + hbs - 2);
                     }
                 }
             }
@@ -1384,10 +1397,13 @@ $(function () {
                 this.field.drawRect(px + 1, py + 1, this.cellSize - 2, this.cellSize - 2);
                 this.field.drawRect(px + 3, py + 3, this.cellSize - 6, this.cellSize - 6);
                 if (this.cellSize > 10) {
-                    this.field.drawRect(px + 5, py + 5, this.cellSize - 10, this.cellSize - 10)
+                    this.field.drawRect(px + 5, py + 5, this.cellSize - 10, this.cellSize - 10);
                 }
                 if (this.cellSize > 14) {
-                    this.field.drawRect(px + 7, py + 7, this.cellSize - 14, this.cellSize - 14)
+                    this.field.drawRect(px + 7, py + 7, this.cellSize - 14, this.cellSize - 14);
+                }
+                if (this.cellSize > 18) {
+                    this.field.drawRect(px + 9, py + 9, this.cellSize - 18, this.cellSize -18);
                 }
             }
         }
