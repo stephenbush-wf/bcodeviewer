@@ -573,8 +573,8 @@ $(function () {
                     visionTmpMinY = visionMinY;
                     visionTmpMaxY = visionMaxY;
                 }
-                for (visY = visionTmpMinY; y <= visionTmpMaxY; y++) {
-                    results[(y * this.match.mapWidth) + visX] = true;
+                for (visY = visionTmpMinY; visY <= visionTmpMaxY; visY++) {
+                    results[(visY * this.match.mapWidth) + visX] = true;
                 }
             }
             return results;
