@@ -516,21 +516,23 @@ $(function () {
      * @returns {Object} - keys are integer-locations, values are true.
      */
     Player.prototype.calculateFog = function (team) {
-        var visibleCells = {};
-        var visionRadius = 3;
-
-        if (this.matchState.hasVision(team)) {
-            visionRadius = 5;
-        }
-
-        for (bk in this.matchState.robots) {
-            bot = this.matchState.robots[bk];
-            if (bot.team == team) {
-                fogBotIdx = (this.match.mapWidth * bot.pos.y) + bot.pos.x;
-                $.extend(visibleCells, this.getVisibleCells(bot.pos, visionRadius));
+        if (this.matchState) {
+            var visibleCells = {};
+            var visionRadius = 3;
+            if (this.matchState.hasVision(team)) {
+                visionRadius = 5;
             }
+
+            for (bk in this.matchState.robots) {
+                bot = this.matchState.robots[bk];
+                if (bot.team == team) {
+                    fogBotIdx = (this.match.mapWidth * bot.pos.y) + bot.pos.x;
+                    $.extend(visibleCells, this.getVisibleCells(bot.pos, visionRadius));
+                }
+            }
+            return visibleCells;
         }
-        return visibleCells;
+        return {};
     };
 
 
