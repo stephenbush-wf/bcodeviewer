@@ -484,7 +484,7 @@ $(function () {
      * Shows a Loading dialog.
      */
     Player.prototype.onGameLoadStart = function () {
-        this.loadDialog = $("<div id='loadDialog'><h2>Loading Game</h2><progress></progress></div>");
+        this.loadDialog = $("<div id='loadDialog'><div class='logo'></div><div class='loadMessage'>Loading game...</div><progress></progress></div>");
         $('progress', this.loadDialog).attr("max", 100);
         $('progress', this.loadDialog).attr("value", 0);
         this.loadDialog.css({
