@@ -682,7 +682,7 @@ $(function () {
         var teamInfo = this.game.teams[team];
         var $panel = $("<div class='teamStatsPanel' id='team-stats-"+team+"'></div>");
         $panel.css({flex: 1});
-        $panel.append($("<h1 class='team-" + team + "'>" + teamInfo.name + "</h1>"));
+        $panel.append($("<h1 class='team-" + team + "'><span id='team-name'>" + teamInfo.name + "</span><div class='stars'></div></h1>"));
 
         var hqContainer = $("<div style='display: flex; flex-direction: row'></div>");
         var hqIcon = $("<div class='hqIcon team-" + team + "'></div>");
@@ -735,6 +735,7 @@ $(function () {
      */
     Player.prototype.buildHeader = function () {
         this.header = $("<div id='header'></div>");
+        this.logo = $("<img id='logo' src='img/blitzcode.png' />");
         this.matchSelector = $("<select id='matchSelector'></select>");
         this.roundIndicator = $("<div id='roundIndicator'>0/0</div>");
         this.timeSlider = $("<input id='timeSlider' type='range' max='1' value='0' />");
@@ -764,6 +765,7 @@ $(function () {
         this.speedSlider.on('change input', '', this.onSpeedSliderChange.bind(this));
         this.playPauseButton.on('click', '', this.togglePlayback.bind(this));
 
+        this.header.append(this.logo);
         this.header.append(this.matchSelector);
         this.header.append(this.gotoStartButton);
         this.header.append(this.goBackButton);
@@ -935,10 +937,9 @@ $(function () {
             if (this.round == this.match.states.length-1 && this.match.winner == statsTeam) {
                 wins += 1;
             }
-            $("h1 i", panel).remove();
+            $("div.stars i", panel).remove();
             for (i=0; i<wins; i++) {
-
-                $("h1", panel).append("<i class='fa fa-star'></i>");
+                $('div.stars').append("<i class='fa fa-star'></i>");
             }
 
             for (i in statsCounts[statsTeam]) {

@@ -52,6 +52,10 @@
             background-color: white;
         }
 
+        img#logo {
+            max-height: 24px;
+            margin: 0px 5px;
+        }
         .botCounts table {
             width: 100%;
         }
@@ -227,16 +231,21 @@
         }
 
         #statsPanel h1 {
+            position: relative;
             font-size: 16px;
             text-align: center;
             margin-top: 0px;
             margin-bottom: 5px;
             background: #ccc;
         }
+        #statsPanel div.stars {
+            position: absolute;
+            top: 0px;
+            right: 0px;
+        }
 
-        #statsPanel h1 i.fa {
+        #statsPanel div.stars i.fa-star {
             color: #FFFF00;
-            float: right;
             margin-right: 3px;
             line-height: 19px;
             text-shadow: 0px 0px 3px black;
