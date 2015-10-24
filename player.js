@@ -29,13 +29,16 @@ $(function () {
 
     var hbs;
 
-    var selectedBotHPPct
+    var selectedBotHPPct;
 
     var lines, attackingStr;
     var src, dest;
     var applyIter, undoIter;
     var currentRound, maxRound;
 
+    var visionTmpMinY, visionTmpMaxY;
+    var visionMinY, visionMaxY, visionMinX, visionMaxX;
+    var visX, visY;
 
     /**
      * Creates the BattleCode Game Viewer.
@@ -124,7 +127,6 @@ $(function () {
 
         /**
          * the fog layer.
-         *
          * @member {PIXI.Grapics} fogLayer;
          */
         this.fogLayer = new PIXI.Graphics();
@@ -338,6 +340,10 @@ $(function () {
     };
 
 
+    /**
+     * Called when the 'vision' dropdown is changed.
+     * @param {Object} ev - Change Event
+     */
     Player.prototype.onVisionSelectorChange = function (ev) {
         this.visionTeam = this.visionSelector.val();
         this.renderFog();
@@ -500,6 +506,13 @@ $(function () {
         }.bind(this), 1);
     };
 
+    
+    /**
+     * Finds all squares visible by the given team.
+     * 
+     * @param {String} team 
+     * @returns {Object} - keys are integer-locations, values are true.
+     */
     Player.prototype.calculateFog = function (team) {
         var visibleCells = {};
         var visionRadius = 3;
@@ -518,41 +531,50 @@ $(function () {
         return visibleCells;
     };
 
+
+    /**
+     * finds all squares visible from the given position
+     * within the given radius. (not squared.)
+     * 
+     * @param pos
+     * @param {Number} radius - Only 3 and 5 are supported. 
+     * @returns {Object} - keys are integer locations.
+     */
     Player.prototype.getVisibleCells = function (pos, radius) {
         var results = {};
-        var minX = Math.max(0, pos.x - radius);
-        var maxX = Math.min(this.match.mapWidth-1, pos.x + radius);
-        var minY = Math.max(0, pos.y - radius);
-        var maxY = Math.min(this.match.mapHeight-1, pos.y + radius);
-        var _minY, _maxY;
+        var visionMinX = Math.max(0, pos.x - radius);
+        var visionMaxX = Math.min(this.match.mapWidth-1, pos.x + radius);
+        var visionMinY = Math.max(0, pos.y - radius);
+        var visionMaxY = Math.min(this.match.mapHeight-1, pos.y + radius);
+        var visionTmpMinY, visionTmpMaxY;
         if (radius == 3) {
-            for (var x = minX; x <= maxX; x++) {
-                if (x == pos.x - radius || x == pos.x + radius) {
-                    _minY = pos.y - radius + 1;
-                    _maxY = pos.y + radius - 1;
+            for (visX = visionMinX; visX <= visionMaxX; visX++) {
+                if (visX == pos.x - radius || visX == pos.x + radius) {
+                    visionTmpMinY = pos.y - radius + 1;
+                    visionTmpMaxY = pos.y + radius - 1;
                 } else {
-                    _minY = minY;
-                    _maxY = maxY;
+                    visionTmpMinY= visionMinY;
+                    visionTmpMaxY = visionMaxY;
                 }
-                for (var y = _minY; y <= _maxY; y++) {
-                    results[(y * this.match.mapWidth) + x] = true;
+                for (visY = visionTmpMinY; visY <= visionTmpMaxY; visY++) {
+                    results[(visY * this.match.mapWidth) + visX] = true;
                 }
             }
             return results;
         } else {
-            for (var x = minX; x <= maxX; x++) {
-                if (x == pos.x - radius || x == pos.x + radius) {
-                    _minY = pos.y - radius + 3;
-                    _maxY = pos.y + radius - 3;
-                } else if (x < (pos.x - radius) + 3 || x > pos.x + radius - 3) {
-                    _minY = pos.y - radius + 1;
-                    _maxY = pos.y + radius - 1;
+            for (visX = visionMinX; visX <= visionMaxX; visX++) {
+                if (visX == pos.x - radius || visX == pos.x + radius) {
+                    visionTmpMinY = pos.y - radius + 3;
+                    visionTmpMaxY = pos.y + radius - 3;
+                } else if (visX < (pos.x - radius) + 3 || visX > pos.x + radius - 3) {
+                    visionTmpMinY = pos.y - radius + 1;
+                    visionTmpMaxY = pos.y + radius - 1;
                 } else {
-                    _minY = minY;
-                    _maxY = maxY;
+                    visionTmpMinY = visionMinY;
+                    visionTmpMaxY = visionMaxY;
                 }
-                for (var y = _minY; y <= _maxY; y++) {
-                    results[(y * this.match.mapWidth) + x] = true;
+                for (visY = visionTmpMinY; y <= visionTmpMaxY; y++) {
+                    results[(y * this.match.mapWidth) + visX] = true;
                 }
             }
             return results;
