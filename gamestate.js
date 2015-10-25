@@ -230,6 +230,7 @@ $(function () {
             action: null,
             actionRounds: null,
             attacking: {},
+            isMoving: false,
             id: rId,
             indicatorStrings: {0: "", 1: "", 2: ""}
         };
@@ -256,7 +257,7 @@ $(function () {
     Game.prototype.handleMove = function (node, state) {
         var robotId = $(node).attr('robotID');
         var bot = state.robots[robotId];
-
+        bot.isMoving = true;
         var newLoc = $(node).attr("newLoc").split(",");
         newLoc = {x: parseInt(newLoc[0]), y: parseInt(newLoc[1])};
 
@@ -477,6 +478,9 @@ $(function () {
 
             for (var bk in state.robots) {
                 bot = state.robots[bk];
+                if (bot.isMoving) {
+                    bot.isMoving = false;
+                }
                 if (this.toDie.indexOf(bk) != -1) {
                     state.delta.push({event: "removeDead", bot: state.robots[bk]});
                     delete state.robots[bk];

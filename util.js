@@ -1,6 +1,16 @@
 $(function () {
 
     var zeroPad_vs, getRotation_vec, r, g, b;
+    var directionTexts = [
+        ["east", 5.890486225480862],
+        ["northeast", 5.10508806208],
+        ["north", 4.31968989869],
+        ["northwest", 3.53429173529],
+        ["west", 2.74889357189],
+        ["southwest", 1.96349540849],
+        ["south", 1.1780972451],
+        ["southeast", 0.392699081699]
+    ];
 
     var Util = {
 
@@ -18,6 +28,17 @@ $(function () {
             );
         },
 
+
+        getDirectionText: function (radians) {
+            var di;
+            for (var i=0; i<directionTexts.length;i++) {
+                di = directionTexts[i];
+                if (radians > di[1]) {
+                    return di[0];
+                }
+            }
+            return directionTexts[0][0];
+        },
 
         /**
          * Make an element fullscreen

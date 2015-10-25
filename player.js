@@ -330,9 +330,8 @@ $(function () {
      */
     Player.prototype.onSpeedSliderChange = function (e) {
 
-        var pct = (this.speedSlider.val()/100.0);
+        var pct = this.speedSlider.val() / 100.0;
         this.frameDuration = FRAME_DURATION - (FRAME_DURATION * pct);
-        console.log("Setting frameDuration to " + this.frameDuration);
         this.speedIndicator.text(this.speedSlider.val() + "%");
         for (i=0; i<this.boomFrames.length; i++) {
             this.boomFrames[i].time = this.frameDuration*2 / this.boomFrames.length;
@@ -374,7 +373,7 @@ $(function () {
         $('.botIcon', this.selectedBotPanel)
             .empty()
             .append("<div class='energonOuter'><div class='energon'></div></div>");
-        $('#selectedBotPanel').show();
+        $('.selectedBotStats').show();
         this.updateSelectedBotPanel();
     };
 
@@ -746,11 +745,12 @@ $(function () {
         this.selectedBotPanel = $(
             "<div id='selectedBotPanel'>" +
                 "<h1>no robot selected</h1>" +
-                "<div class='selectedBotDetailWrap'>" +
-                    "<div class='botIcon'></div>" +
-                    "<div class='details'></div>" +
-                "</div>" +
-            "<div class='indicatorStrings'></div>" +
+                "<table class='selectedBotStats' style='display:none;'>" +
+                    "<tr><td rowspan='3'><div class='botIcon'></div></td><th class='energon'><i class='fa fa-heartbeat'></i></th><td class='energon'></td><th class='shields'><i class='fa fa-shield'></i></th><td class='shields'></td></tr>" +
+                    "<tr><th class='position'><i class='fa fa-compass'></i></th><td class='position'></td><th class='bytecodes'><i class='fa fa-clock-o'></i></th><td class='bytecodes'>0</td></tr>" +
+                    "<tr><td colspan='4' class='action'><span class='action-text'>Idle</span><div class='actionProgressWrapper'><div class='actionProgress'></div></div></td></tr>" +
+                "</table>" +
+                "<div class='indicatorStrings'></div>" +
             "</div>");
         return this.selectedBotPanel;
     };
@@ -767,7 +767,7 @@ $(function () {
         this.matchSelector = $("<select id='matchSelector'></select>");
         this.roundIndicator = $("<div id='roundIndicator'>0/0</div>");
         this.timeSlider = $("<input id='timeSlider' type='range' max='1' value='0' />");
-        this.speedSlider = $("<input title='Playback Speed' id='speedSlider' type='range' min='0' max='100' value='70' />");
+        this.speedSlider = $("<input title='Playback Speed' id='speedSlider' type='range' min='1' max='99' value='70' />");
         this.playPauseButton = $("<button title='Play/Pause' id='playPauseButton' class='paused'><i class='fa fa-play'></i></button>");
         this.gotoEndButton = $("<button title='Go to last round' id='gotoEndButton'><i class='fa fa-fast-forward'></i></button>");
         this.gotoStartButton = $("<button title='Go to first round' id='gotoStartButton'><i class='fa fa-fast-backward'></i></button>");
@@ -1005,8 +1005,12 @@ $(function () {
                 $('.botIcon .energonOuter', this.selectedBotPanel).show();
                 selectedBotHPPct = Math.floor((bot.energon / bot.maxEnergon) * 100);
                 color = Util.toCSSColor(Math.floor(Util.getHealthColor(selectedBotHPPct/100)));
-                $("#selectedBotPanel .energon").css({width: selectedBotHPPct + "%", backgroundColor: color});
+                $("#selectedBotPanel div.energon").css({width: selectedBotHPPct + "%", backgroundColor: color});
                 $("#selectedBotPanel h1").text("#" + bot.id + "[" + Util.titleCase(bot.type) + "]");
+                $("#selectedBotPanel td.energon").text(Math.floor(bot.energon) + "/" + bot.maxEnergon);
+                $("#selectedBotPanel td.shields").text(Math.floor(bot.shields));
+                $("#selectedBotPanel td.position").text(bot.pos.x + ", " + bot.pos.y);
+                $("#selectedBotPanel td.bytecodes").text(bot.bytecodesUsed);
 
                 $(".indicatorStrings", this.selectedBotPanel)
                     .empty()
@@ -1014,43 +1018,39 @@ $(function () {
                     .append("<span>" + bot.indicatorStrings[1] + "</span><br/>")
                     .append("<span>" + bot.indicatorStrings[2] + "</span>");
 
-                attackingStr = "";
+                var actionStr = 'Idle';
 
-                for (ak in bot.attacking) {
-                    ax = ak % this.match.mapWidth;
-                    ay = Math.floor(ak / this.match.mapWidth);
-                    if (bot.attacking[ak]) {
-                        attackingStr += "(" + ax + "," + ay + "), ";
+                if (bot.isMoving) {
+                    actionStr = 'Moving ' + Util.getDirectionText(bot.dir);
+                }
+
+                if (bot.type == 'artillery') {
+                    for (ak in bot.attacking) {
+                        ax = ak % this.match.mapWidth;
+                        ay = Math.floor(ak / this.match.mapWidth);
+                        if (bot.attacking[ak]) {
+                            actionStr = "Attacking " + ax + ", " + ay;
+                            break;
+                        }
                     }
                 }
 
-                if (attackingStr.length > 2 && attackingStr.substring(attackingStr.length-2) == ', ') {
-                    attackingStr = attackingStr.substring(0, attackingStr.length-2);
-                }
-
-                lines = [
-                    "Position: " + bot.pos.x + ", " + bot.pos.y
-                ];
-
                 if (bot.action) {
-                    lines.push(bot.action + ": " + (bot.actionRoundsTotal-(bot.actionRounds-1)) + "/" + bot.actionRoundsTotal);
-                }
-                if (attackingStr) {
-                    lines.push("Attacking: " + (attackingStr));
+                    var prog = (bot.actionRoundsTotal-(bot.actionRounds-1));
+                    actionStr = this.botActionTexts[bot.action] + " [" + prog + "/" + bot.actionRoundsTotal + "]";
+                    $("#selectedBotPanel div.actionProgress").css({width: Math.floor((prog / bot.actionRoundsTotal) * 100) + '%'});
+                } else {
+                    $("#selectedBotPanel div.actionProgress").css({width: '0%'});
                 }
 
-                if (bot.shields > 0) {
-                    lines.push("Shields: " + bot.shields);
-                }
-                lines.push("Bytecodes Used: " + bot.bytecodesUsed);
-
-                $(".details", this.selectedBotPanel).html(lines.join("<br />"));
+                $("#selectedBotPanel span.action-text").text(actionStr);
 
                 if (bot.isDead) {
                     $('.botIcon', this.selectedBotPanel).css({backgroundColor: "#FF6666"});
                 }
+
             } else {
-                $('.botIcon .energon', this.selectedBotPanel).css({width: "0%"});
+                $('.botIcon div.energon', this.selectedBotPanel).css({width: "0%"});
                 $('.botIcon', this.selectedBotPanel).css({backgroundColor: "#FF6666"});
             }
         }
@@ -1474,6 +1474,12 @@ $(function () {
         }
     };
 
+
+    Player.prototype.botActionTexts = {
+        layingMine: "Mining",
+        defusingMine: "Defusing",
+        capturing: "Capturing",
+    };
 
     Player.prototype.upgrades = {
         FUSION: 25,

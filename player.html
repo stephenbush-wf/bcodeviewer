@@ -56,20 +56,20 @@
             max-height: 24px;
             margin: 0px 5px;
         }
-        table.teamStats {
+        table.teamStats,table.selectedBotStats {
             width: 100%;
             border: 1px solid silver;
             border-collapse: collapse;
         }
-        table.teamStats td, table.teamStats th {
+        table.teamStats td, table.teamStats th, table.selectedBotStats td, table.selectedBotStats th {
             border: 1px solid silver;
             text-align: center;
             background-position: center center;
         }
-        table.teamStats td {
+        table.teamStats td, table.selectedBotStats td {
             border-left: none;
         }
-        table.teamStats th {
+        table.teamStats th, table.selectedBotStats th {
             border-right: none;
         }
 
@@ -119,9 +119,20 @@
             background-color: lime;
         }
 
-        .teamPowerWrapper {
+        .teamPowerWrapper, .actionProgressWrapper {
             height: 20px;
             width: 100%;
+        }
+
+        div.actionProgress {
+            height: 20px;
+            background-color: #00AAFF;
+        }
+
+        .action-text {
+            text-shadow: 0px 0px 4px white;
+            float: left;
+            margin-left: 2px;
         }
 
         div.teamPower {
@@ -202,7 +213,7 @@
 
         }
 
-        .teamStatsPanel .energon, #selectedBotPanel .energon {
+        .teamStatsPanel div.energon, #selectedBotPanel div.energon {
             width: 100%;
             height: 6px;
             background: lime;
@@ -213,6 +224,10 @@
             font-weight: bolder;
             font-size: 16px;
             width: 25%;
+        }
+        table.selectedBotStats td {
+            width: 33%;
+            font-weight: normal;
         }
         table.teamStats td.powerContainer {
             width: 100%;
@@ -242,12 +257,11 @@
 
         #selectedBotPanel .botIcon {
             overflow: hidden;
-            max-height: 64px;
+
             min-height: 64px;
-            min-width: 64px;
-            max-width: 64px;
             background-position: center;
             background-size: contain;
+            background-repeat: no-repeat;
             position: relative;
         }
 
