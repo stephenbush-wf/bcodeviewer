@@ -746,8 +746,8 @@ $(function () {
             "<div id='selectedBotPanel'>" +
                 "<h1>no robot selected</h1>" +
                 "<table class='selectedBotStats' style='display:none;'>" +
-                    "<tr><td rowspan='3'><div class='botIcon'></div></td><th class='energon'><i class='fa fa-heartbeat'></i></th><td class='energon'></td><th class='shields'><i class='fa fa-shield'></i></th><td class='shields'></td></tr>" +
-                    "<tr><th class='position'><i class='fa fa-compass'></i></th><td class='position'></td><th class='bytecodes'><i class='fa fa-clock-o'></i></th><td class='bytecodes'>0</td></tr>" +
+                    "<tr><td rowspan='3'><div class='botIcon'></div></td><th title='Energon' class='energon'><i  title='Energon' class='fa fa-heartbeat'></i></th><td  title='Energon' class='energon'></td><th title='Shields' class='shields'><i title='Shields' class='fa fa-shield'></i></th><td title='Shields' class='shields'></td></tr>" +
+                    "<tr><th class='position' title='Position' ><i title='position' class='fa fa-compass'></i></th><td title='position' class='position'></td><th title='Bytecodes Used' class='bytecodes'><i title='Bytecodes Used' class='fa fa-clock-o'></i></th><td title='Bytecodes Used' class='bytecodes'>0</td></tr>" +
                     "<tr><td colspan='4' class='action'><span class='action-text'>Idle</span><div class='actionProgressWrapper'><div class='actionProgress'></div></div></td></tr>" +
                 "</table>" +
                 "<div class='indicatorStrings'></div>" +
