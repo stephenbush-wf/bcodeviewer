@@ -593,14 +593,22 @@ $(function () {
     Game.prototype.loadGzipped = function (data) {
         var arr = new Uint8Array(data);
         console.log("read " + arr.length + " bytes.");
-        var gz = new Zlib.Gunzip(arr);
-        var contents = gz.decompress();
-        var s = new TextDecoder("ascii").decode(contents);
-        console.log(s.length + " bytes uncompressed");
-        var $xml = $($.parseXML(s));
-        var children = $.makeArray($($xml.children()[0]).children());
-        console.log("Processing " + children.length + " events");
-        this.processChildren(children, children.length);
+        var xml;
+        try {
+            var gz = new Zlib.Gunzip(arr);
+            arr = gz.decompress();
+        } catch (err) {
+            console.log("gunzip fail", err);
+        }
+        try {
+            xml = new TextDecoder("ascii").decode(arr);
+            var $xml = $($.parseXML(xml));
+            var children = $.makeArray($($xml.children()[0]).children());
+            console.log("Processing " + children.length + " events");
+            this.processChildren(children, children.length);
+        } catch (err) {
+            this.emit("loadError", {message: "Invalid Match File", error: err});
+        }
     };
 
 
@@ -642,7 +650,9 @@ $(function () {
                 xhr.addEventListener("progress", this.downloadProgressHandler.bind(this));
                 return xhr;
             }.bind(this),
-
+            error: function (err) {
+                this.emit('loadError', {error: err, message: err.statusText});
+            }.bind(this),
             success: this.loadGzipped.bind(this)
         });
 

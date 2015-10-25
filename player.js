@@ -479,6 +479,21 @@ $(function () {
 
 
     /**
+     * Called when the Game fails to load
+     *
+     * Shows an error message in the loading dialog.
+     */
+    Player.prototype.onGameLoadError = function (err) {
+        console.error(err.error);
+        $(".loadMessage", this.loadDialog).addClass("error").text("ERROR: " + err.message);
+        $('progress', this.loadDialog).remove();
+        var retryButton = $("<button class='reload'>Back</button>");
+        this.loadDialog.append(retryButton);
+        retryButton.on('click', function () { location.reload() }).focus();
+    };
+
+
+    /**
      * Called when the Game begins loading.
      *
      * Shows a Loading dialog.
@@ -636,6 +651,8 @@ $(function () {
             this.game.on('loadStart', this.onGameLoadStart.bind(this));
             this.game.on('loadProgress', this.onGameLoadProgress.bind(this));
             this.game.on('loadComplete', this.onGameLoadComplete.bind(this));
+            this.game.on('loadError', this.onGameLoadError.bind(this));
+            $('div.loadMessage', this.loadDialog).html("<span class='errorMessage'></span>");
         } else {
             this.onGameLoadComplete();
         }
