@@ -421,35 +421,36 @@ $(function () {
      * sets the size of game objects based on available screen size.
      */
     Player.prototype.setDimensions = function () {
-        var wPix = (this.canvasContainer.width() / this.match.mapWidth);
-        var hPix = (this.canvasContainer.height() / this.match.mapHeight);
+        if (this.match) {
+            var wPix = (this.canvasContainer.width() / this.match.mapWidth);
+            var hPix = (this.canvasContainer.height() / this.match.mapHeight);
 
-        this.cellSize = Math.min(wPix, hPix);
-        this.boardWidth = (this.cellSize * this.match.mapWidth);
-        this.boardHeight = (this.cellSize * this.match.mapHeight);
+            this.cellSize = Math.min(wPix, hPix);
+            this.boardWidth = (this.cellSize * this.match.mapWidth);
+            this.boardHeight = (this.cellSize * this.match.mapHeight);
 
-        var bottomSpace = $(this.canvasContainer).height() - this.boardHeight;
-        var rightSpace = $(this.canvasContainer).width() - this.boardWidth;
+            var bottomSpace = $(this.canvasContainer).height() - this.boardHeight;
+            var rightSpace = $(this.canvasContainer).width() - this.boardWidth;
 
-        if (bottomSpace > rightSpace) {
-            while (bottomSpace < 160) {
-                this.cellSize-=0.25;
-                this.boardWidth = (this.cellSize * this.match.mapWidth);
-                this.boardHeight = (this.cellSize * this.match.mapHeight);
-                bottomSpace = $(this.canvasContainer).height() - this.boardHeight;
+            if (bottomSpace > rightSpace) {
+                while (bottomSpace < 160) {
+                    this.cellSize -= 0.25;
+                    this.boardWidth = (this.cellSize * this.match.mapWidth);
+                    this.boardHeight = (this.cellSize * this.match.mapHeight);
+                    bottomSpace = $(this.canvasContainer).height() - this.boardHeight;
+                }
+            } else {
+                while (rightSpace < 250) {
+                    this.cellSize -= 0.25;
+                    this.boardWidth = (this.cellSize * this.match.mapWidth);
+                    this.boardHeight = (this.cellSize * this.match.mapHeight);
+                    rightSpace = $(this.canvasContainer).width() - this.boardWidth;
+                }
             }
-        } else {
-            while (rightSpace < 250) {
-                this.cellSize -= 0.25;
-                this.boardWidth = (this.cellSize * this.match.mapWidth);
-                this.boardHeight = (this.cellSize * this.match.mapHeight);
-                rightSpace = $(this.canvasContainer).width() - this.boardWidth;
-            }
+
+            this.botSize = this.cellSize;
+            this.halfBotSize = this.botSize / 2;
         }
-
-        this.botSize = this.cellSize;
-        this.halfBotSize = this.botSize / 2;
-
         if (this.matchState) {
             sprite, bot;
             for (bk in this.matchState.robots) {
