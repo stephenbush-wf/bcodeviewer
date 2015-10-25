@@ -90,9 +90,13 @@
             left:0px;
             right:0px;
             width: 32px;
-            background-color: #666;
+            background-color: #aaaaaa;
             height: 4px;
             margin: 1px;
+        }
+
+        .teamStatsPanel .upgrade progress::-webkit-progress-bar {
+            background-color: #aaaaaa;
         }
 
         .teamStatsPanel .upgrade.DEFUSION { background-image: url(img/defusion.png); }
@@ -108,8 +112,12 @@
             background-color: #009c00;
         }
 
-        .teamStatsPanel .upgrade progress::-webkit-progress-bar {
-            background-color: #666;
+        .teamStatsPanel .upgrade progress.half::-webkit-progress-value {
+            background-color: red;
+        }
+
+        .teamStatsPanel .upgrade progress.half::-moz-progress-bar {
+            background-color: red;
         }
 
         .teamStatsPanel .upgrade progress.complete::-webkit-progress-value {
@@ -179,6 +187,7 @@
             background-size: 16px 16px;
             background-repeat: no-repeat;
         }
+
         #team-stats-a table.teamStats th.soldier { background-image: url(img/soldier-a.png); }
         #team-stats-a table.teamStats th.artillery { background-image: url(img/artillery-a.png); }
         #team-stats-a table.teamStats th.supplier { background-image: url(img/supplier-a.png); }
@@ -326,14 +335,6 @@
             text-shadow: 0px 0px 3px black;
         }
 
-        .teamStatsPanel .botCounts {
-            flex: 2;
-        }
-
-        .teamStatsPanel .imgWrap {
-            flex: 1
-        }
-
         .wrapper {
             display: flex;
             flex-flow: column;
@@ -471,7 +472,7 @@
         }
         body:after {
             display: none;
-            content: url(img/blitzcode.png);
+            content: url(img/blitzcode.png) url(img/nuke.png) url(img/vision.png) url(img/defusion.png) url(img/pickaxe.png) url(img/fusion.png);
         }
     </style>
 </head>

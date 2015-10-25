@@ -1042,16 +1042,25 @@ $(function () {
                     actionStr = 'Moving ' + Util.getDirectionText(bot.dir);
                 }
 
-                if (bot.type == 'artillery') {
-                    for (ak in bot.attacking) {
-                        ax = ak % this.match.mapWidth;
-                        ay = Math.floor(ak / this.match.mapWidth);
-                        if (bot.attacking[ak]) {
-                            actionStr = "Attacking " + ax + ", " + ay;
-                            break;
+
+                for (ak in bot.attacking) {
+                    ax = ak % this.match.mapWidth;
+                    ay = Math.floor(ak / this.match.mapWidth);
+                    if (bot.attacking[ak]) {
+
+                        if (actionStr == 'Idle') {
+                            actionStr = "Attacking";
+                        } else {
+                            actionStr += ", Attacking"
                         }
+
+                        if (bot.type == 'artillery') {
+                            actionStr += " " + ax + ", " + ay;
+                        }
+                        break;
                     }
                 }
+
 
                 if (bot.action) {
                     var prog = (bot.actionRoundsTotal-(bot.actionRounds-1));
@@ -1156,6 +1165,8 @@ $(function () {
         } else if (ev.value == 1) {
             progressBar.parent().show();
             $('tr.upgradesRow', panel).show();
+        } else if (ev.upgrade == 'NUKE' && ev.value == 202) {
+            $('.NUKE progress', panel).addClass("half");
         }
         progressBar.attr("value", ev.value);
     };
@@ -1173,6 +1184,8 @@ $(function () {
             if ($('div.upgrade:visible', panel).length == 0) {
                 $('tr.upgradesRow', panel).hide();
             }
+        } else if (ev.upgrade == 'NUKE' && ev.value == 202) {
+            $('.NUKE progress', panel).removeClass('half');
         }
         progressBar.attr("value", ev.value-1);
     };
