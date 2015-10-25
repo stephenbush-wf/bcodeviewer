@@ -1437,12 +1437,14 @@ $(function () {
 
         this.lastElapsed = elapsed;
 
+        // How many rounds do we advance?
+        i=0;
         while (this.frameTime > this.frameDuration) {
             this.frameTime -= this.frameDuration;
-            if (!this.paused) {
-                this.transitionToRound(this.round + 1);
-            }
-
+            i++;
+        }
+        if (i > 0 && !this.paused) {
+            this.transitionToRound(this.round + i);
         }
 
         this.updateStatusLayer();
