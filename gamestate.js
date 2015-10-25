@@ -1,8 +1,15 @@
 $(function () {
+
+    // These headers, if set on the response to a url loaded game, will
+    // override the displayed team names.
+    var TEAM_NAME_HEADERS = {
+        a: 'X-Team-A',
+        b: 'X-Team-B'
+    };
+
     var MINE_NEUTRAL = 0x6c6c6c;
     var MINE_A = 0xFF6666;
     var MINE_B = 0x6666FF;
-
 
     /**
      * Create a MatchState representing a single round of gameplay.
@@ -133,8 +140,8 @@ $(function () {
      * @param {Object} node - a ser.ExtensibleMetadata XML node
      */
     Game.prototype.doMatchMetadata = function (node) {
-        this.teams.a = {name: $(node).attr('team-a')};
-        this.teams.b = {name: $(node).attr('team-b')};
+        this.teams.a = {name: this.teamNameOverrides.a || $(node).attr('team-a')};
+        this.teams.b = {name: this.teamNameOverrides.b || $(node).attr('team-b')};
         this.currentMatch.mapName = $(node).attr("maps").split(",")[this.currentMatch.matchNumber];
     };
 
@@ -589,8 +596,12 @@ $(function () {
      * Load the gzipped game state from an ArrayBuffer.
      *
      * @param {ArrayBuffer} data - an ArrayBuffer of bytes.
+     * @param {Object} teamNameOverrides - an object with
+     *                 a and/or b properties containing override
+     *                 values for the participating team names.
      */
-    Game.prototype.loadGzipped = function (data) {
+    Game.prototype.loadGzipped = function (data, teamNameOverrides) {
+        this.teamNameOverrides = teamNameOverrides || {};
         var arr = new Uint8Array(data);
         console.log("read " + arr.length + " bytes.");
         var xml;
@@ -600,6 +611,7 @@ $(function () {
         } catch (err) {
             console.log("gunzip fail", err);
         }
+
         try {
             xml = new TextDecoder("ascii").decode(arr);
             var $xml = $($.parseXML(xml));
@@ -653,7 +665,21 @@ $(function () {
             error: function (err) {
                 this.emit('loadError', {error: err, message: err.statusText});
             }.bind(this),
-            success: this.loadGzipped.bind(this)
+            success: function (data, textStatus, resp) {
+                console.log(resp);
+                if (resp.getResponseHeader) {
+                    var teamA = resp.getResponseHeader(TEAM_NAME_HEADERS.a);
+                    var teamB = resp.getResponseHeader(TEAM_NAME_HEADERS.b);
+                    var teamNameOverrides = {};
+                    if (teamA) {
+                        teamNameOverrides.a = teamA;
+                    }
+                    if (teamB) {
+                        teamNameOverrides.b = teamB;
+                    }
+                }
+                this.loadGzipped(data, teamNameOverrides);
+            }.bind(this)
         });
 
     };
