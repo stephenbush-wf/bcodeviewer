@@ -73,15 +73,21 @@ $(function () {
      *
      * @constructor
      */
-    var Game = function () {
+    var Game = function (options) {
+
         EventEmitter.call(this);
+        this.options = $.extend({}, this.defaultOptions, options);
         this.matches = [];
         this.teams = {};
         this.isLoaded = false;
         this.isLoading = false;
     };
+
     Game.prototype = new EventEmitter;
 
+    Game.prototype.defaultOptions = {
+        teamNames: {},
+    };
 
     /**
      * Convert a string location of the format 'x,y' to an integer
@@ -140,8 +146,12 @@ $(function () {
      * @param {Object} node - a ser.ExtensibleMetadata XML node
      */
     Game.prototype.doMatchMetadata = function (node) {
-        this.teams.a = {name: this.teamNameOverrides.a || $(node).attr('team-a')};
-        this.teams.b = {name: this.teamNameOverrides.b || $(node).attr('team-b')};
+        var aName = $(node).attr('team-a');
+        var bName = $(node).attr('team-b');
+        aName = this.options.teamNames[aName] || aName;
+        bName = this.options.teamNames[bName] || bName;
+        this.teams.a = {name: this.teamNameOverrides.a || aName};
+        this.teams.b = {name: this.teamNameOverrides.b || bName};
         this.currentMatch.mapName = $(node).attr("maps").split(",")[this.currentMatch.matchNumber];
     };
 

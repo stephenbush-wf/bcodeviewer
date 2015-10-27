@@ -48,7 +48,8 @@ $(function () {
      * @param {Object} container - an element to serve as the container for the player
      * @constructor
      */
-    var Player = function (container) {
+
+    var Player = function (container, options) {
 
         console.log('pixelratio', window.devicePixelRatio);
         /**
@@ -994,7 +995,6 @@ $(function () {
 
             wins = this.match.wins[statsTeam];
             if (this.round == this.match.states.length-1) {
-
                 if (this.match.winner == statsTeam) {
                     wins += 1;
                 } else {

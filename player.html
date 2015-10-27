@@ -18,27 +18,41 @@
     <script type="text/javascript" src="player.js"></script>
     <script>
         $(function () {
-            if (location.hash.length > 1) {
-                var game = new Game();
-                player = new Player($('.wrapper'));
-                player.loadGame(game);
-                game.loadUrl(location.hash.substring(1));
-            } else {
-                $(".gameDialog form").on('submit', function (evt) {
-                    evt.preventDefault();
-                    var fileInput = $(".wrapper input[type='file']").get(0);
-                    var urlInput = $(".wrapper input[type='text']").get(0);
-                    var game = new Game();
+
+            function init (teams) {
+
+                var teamNames = {};
+
+                if (teams) {
+                    for (var i=0; i<teams.length; i++) {
+                        var key = 'team' + Util.zeroPad(teams[i].number, 3);
+                        teamNames[key] = teams[i].name;
+                    }
+                }
+
+                var game = new Game({teamNames: teamNames});
+                if (location.hash.length > 1) {
                     player = new Player($('.wrapper'));
                     player.loadGame(game);
-                    if (fileInput.files.length > 0) {
-                        game.loadFile(fileInput);
-                    } else {
-                        game.loadUrl($(urlInput).val());
-                    }
+                    game.loadUrl(location.hash.substring(1));
+                } else {
+                    $(".gameDialog form").on('submit', function (evt) {
+                        evt.preventDefault();
+                        var fileInput = $(".wrapper input[type='file']").get(0);
+                        var urlInput = $(".wrapper input[type='text']").get(0);
+                        player = new Player($('.wrapper'));
+                        player.loadGame(game);
+                        if (fileInput.files.length > 0) {
+                            game.loadFile(fileInput);
+                        } else {
+                            game.loadUrl($(urlInput).val());
+                        }
 
-                });
+                    });
+
+                }
             }
+            $.ajax({url: "/teams/number", method: "GET", success: init, error: init, dataFormat: 'json'});
         });
 
     </script>
