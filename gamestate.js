@@ -233,6 +233,7 @@ $(function () {
             type: type.toLowerCase(),
             pos: {x: parseInt(loc[0]), y: parseInt(loc[1])},
             dir: 0,
+            hats: [],
             shields: 0,
             action: null,
             actionRounds: null,
@@ -451,6 +452,7 @@ $(function () {
 
     /**
      * Process the CaptureSignal element
+     *
      * @param {Object} node - a sig.CaptureSignal XML element
      * @param {MatchState} state - the current round being processed
      */
@@ -463,6 +465,19 @@ $(function () {
         bot.actionRoundsTotal = 50;
     };
 
+    /**
+     * Handle the HatSignal element
+     *
+     * @param {Object} node - a sign.HatSignal XML element
+     * @param {MatchState} state - the current round being processed
+     */
+    Game.prototype.handleHat = function (node, state) {
+        var rId = $(node).attr("robotID");
+        var bot = state.robots[rId];
+        var hat = $(node).attr("hat");
+        bot.hats.push(hat);
+        state.delta.push({event: "hat", botId: rId, hat: hat});
+    };
 
     /**
      * Process a RoundDelta node containing all the signals
@@ -542,6 +557,8 @@ $(function () {
                 this.handleCapture(node, state);
             } else if (node.tagName == 'sig.ResearchSignal') {
                 this.handleResearch(node, state);
+            } else if (node.tagName == 'sig.HatSignal') {
+                this.handleHat(node, state);
             }
         }
     };

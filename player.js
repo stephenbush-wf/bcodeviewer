@@ -40,6 +40,8 @@ $(function () {
     var visionMinY, visionMaxY, visionMinX, visionMaxX;
     var visX, visY;
 
+    var hat;
+
     /**
      * Creates the BattleCode Game Viewer.
      *
@@ -175,6 +177,12 @@ $(function () {
      */
     Player.prototype.onAssetsLoaded = function (loader, resources) {
 
+        // setup the hat textures
+        this.hatTextures = [];
+        for (var i=0; i<=2; i++) {
+            this.hatTextures.push(new PIXI.Texture(resources['hat-' + i].texture));
+        }
+
         // initialize the exposion animation texture-array;
         this.boomFrames = [];
         var texture = resources.boom.texture;
@@ -225,6 +233,9 @@ $(function () {
             .add("medbay-b", "img/medbay-b.png")
             .add("shields-a", "img/shields-a.png")
             .add("shields-b", "img/shields-b.png")
+            .add("hat-0", "img/hats/0.png")
+            .add("hat-1", "img/hats/1.png")
+            .add("hat-2", "img/hats/2.png")
             .load(this.onAssetsLoaded.bind(this));
     };
 
@@ -257,7 +268,7 @@ $(function () {
         if (!this.paused) {
             this.togglePlayback();
         }
-        this.initMatch(this.game.matches[val])
+        this.initMatch(this.game.matches[val]);
     };
 
 
@@ -465,7 +476,9 @@ $(function () {
                 }
 
                 TweenLite.killTweensOf(sprite.position);
-                sprite.position = this.getCellCenter(bot.pos);
+                pos = this.getCellCenter(bot.pos);
+                sprite.position.x = pos.x;
+                sprite.position.y = pos.y;
             }
         } if (this.statsPanel) {
             this.positionStatsPanel();
@@ -855,6 +868,7 @@ $(function () {
     Player.prototype.reset = function () {
         this.initializeStatsPanel();
         this.botSprites = {};
+        this.hatSprites = {};
         this.selectedBot = null;
         this.matchState = null;
         this.frameTime = 0;
@@ -906,7 +920,7 @@ $(function () {
      * @param {Number} round - the desired round
      */
     Player.prototype.transitionToRound = function (round) {
-
+        console.log("Current Cursor Style: ", this.interactionManager.currentCursorStyle);
         if (round > this.match.states.length-1) {
             return;
         }
@@ -1219,7 +1233,7 @@ $(function () {
             console.log("Couldn't find attacking bot");
         }
 
-        if (bot.type == 'artillery') {
+        if (bot.type == 'artillery' && animate) {
             color = bot.team == 'a' ? 0xFF6666 : 0x6666FF;
             this.effectsLayer.lineStyle(this.cellSize < 16 ? 2 : 3, color, 0.5);
             src = this.getCellCenter(bot.pos);
@@ -1236,7 +1250,6 @@ $(function () {
 
 
     Player.prototype.apply_death = function (ev, animate) {
-        this.botLayer.removeChild(this.botSprites[ev.bot.id]);
         if (animate) {
             this.createExplosion(ev.bot.pos);
         }
@@ -1244,7 +1257,6 @@ $(function () {
 
 
     Player.prototype.undo_death = function (ev, animate) {
-        this.botLayer.addChild(this.botSprites[ev.bot.id]);
         if (animate) {
             this.createExplosion(ev.bot.pos);
         }
@@ -1255,6 +1267,14 @@ $(function () {
         bot = this.botSprites[ev.bot.id];
         delete this.botSprites[ev.bot.id];
         this.botLayer.removeChild(bot);
+
+        if (this.hatSprites[ev.bot.id]) {
+            for (var i=0; i < this.hatSprites[ev.bot.id].length; i++) {
+                this.botLayer.removeChild(this.hatSprites[ev.bot.id][i]);
+            }
+            this.hatSprites[ev.bot.id] = [];
+        }
+
         bot.destroy();
     };
 
@@ -1278,8 +1298,12 @@ $(function () {
         bot.location = ev.bot.pos;
         bot.position = this.getCellCenter(ev.bot.pos);
         bot.rotation = ev.bot.dir;
-        this.botSprites[ev.bot.id] = bot;
-        this.botLayer.addChild(bot);
+        this.botSprites[ev.bot.id] = bot;this.botLayer.addChild(bot);
+
+        for (var i=0; i<ev.bot.hats.length; i++) {
+            this.hatSprites[ev.bot.id].push(this.createHat(ev.bot.id, ev.bot.hats[i], ev.bot.hats.length));
+        }
+
     };
 
 
@@ -1288,7 +1312,9 @@ $(function () {
         if (animate) {
             TweenLite.to(sprite.position, this.frameDuration/1000, this.getCellCenter(ev.to));
         } else {
-            sprite.position = this.getCellCenter(ev.to);
+            pos = this.getCellCenter(ev.to);
+            sprite.position.x = pos.x;
+            sprite.position.y = pos.y;
         }
         sprite.rotation = ev.dir;
     };
@@ -1300,7 +1326,9 @@ $(function () {
             if (animate) {
                 TweenLite.to(sprite.position, this.frameDuration / 1000, this.getCellCenter(ev.from));
             } else {
-                sprite.position = this.getCellCenter(ev.from);
+                pos = this.getCellCenter(ev.from);
+                sprite.position.x = pos.x;
+                sprite.position.y = pos.y;
             }
             sprite.rotation = ev.dir;
         }
@@ -1320,6 +1348,40 @@ $(function () {
         if (sprite) {
             sprite.rotation = ev.dir;
         }
+    };
+
+
+    Player.prototype.apply_hat = function (ev, animate) {
+        bot = this.matchState.robots[ev.botId];
+        if (!this.hatSprites[ev.botId]) {
+            this.hatSprites[ev.botId] = [];
+        }
+        this.hatSprites[ev.botId].push(this.createHat(ev.botId, ev.hat, bot.hats.length));
+    };
+
+    Player.prototype.undo_hat = function (ev, animate) {
+        this.botLayer.removeChild(this.hatSprites[ev.botId].pop());
+    };
+
+    /**
+     * Create a random hat for a robot and puts it on it's head.
+     *
+     * @param {Number} botId - the id of the robot
+     * @param {Number} hatId - a unique id for this hat.
+     * @param {Number} hatCount - the total number of hats the bot should have AFTER this.
+     */
+    Player.prototype.createHat = function (botId, hatId, hatCount) {
+        sprite = this.botSprites[botId];
+        if (this.hatIdMap[hatId] === undefined) {
+            this.hatIdMap[hatId] = Math.floor(Math.random() * this.hatTextures.length);
+        }
+        hat = new PIXI.Sprite(this.hatTextures[this.hatIdMap[hatId]]);
+        hat.width = this.botSize;
+        hat.height = this.botSize;
+        hat.anchor = {x: 0.5, y: 1.0 + ((hatCount - 1) * this.botSize * 0.66)};
+        hat.position = sprite.position;
+        this.botLayer.addChild(hat);
+        return hat;
     };
 
 
@@ -1525,6 +1587,7 @@ $(function () {
 
     Player.prototype.textures = {a: {}, b: {}};
 
+    Player.prototype.hatIdMap = {};
 
     window.Player = Player;
 });
