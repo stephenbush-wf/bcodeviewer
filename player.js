@@ -920,7 +920,6 @@ $(function () {
      * @param {Number} round - the desired round
      */
     Player.prototype.transitionToRound = function (round) {
-        console.log("Current Cursor Style: ", this.interactionManager.currentCursorStyle);
         if (round > this.match.states.length-1) {
             return;
         }
