@@ -993,8 +993,13 @@ $(function () {
             panel = $("#team-stats-" + statsTeam);
 
             wins = this.match.wins[statsTeam];
-            if (this.round == this.match.states.length-1 && this.match.winner == statsTeam) {
-                wins += 1;
+            if (this.round == this.match.states.length-1) {
+
+                if (this.match.winner == statsTeam) {
+                    wins += 1;
+                } else {
+                    $(".hqIcon", panel).css({backgroundImage: "url(img/boom.gif)"});
+                }
             }
             $("td.stars i", panel).remove();
             $('tr.starsRow', panel).hide();
