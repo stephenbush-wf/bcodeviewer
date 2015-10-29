@@ -342,8 +342,8 @@ $(function () {
      */
     Player.prototype.onSpeedSliderChange = function (e) {
 
-        var pct = this.speedSlider.val() / 100.0;
-        this.frameDuration = FRAME_DURATION - (FRAME_DURATION * pct);
+        var pct = this.speedSlider.val();
+        this.frameDuration = (0.106122 * pct * pct) - (20.7184*pct) + 1020.61;
         this.speedIndicator.text(this.speedSlider.val() + "%");
         for (i=0; i<this.boomFrames.length; i++) {
             this.boomFrames[i].time = this.frameDuration*2 / this.boomFrames.length;
@@ -1572,7 +1572,6 @@ $(function () {
             }
         }
     };
-
 
     Player.prototype.botActionTexts = {
         layingMine: "Mining",
