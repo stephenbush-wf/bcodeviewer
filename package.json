@@ -1,0 +1,23 @@
+{
+  "name": "bcodeviewer",
+  "version": "0.0.1",
+  "description": "A Battlecode-2013 WebGL Viewer",
+  "directories": {
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andreleblanc-wf/bcodeviewer.git"
+  },
+  "keywords": [
+    "Battlecode",
+    "Blitzcode"
+  ],
+  "private": true,
+  "bugs": {
+    "url": "https://github.com/andreleblanc-wf/bcodeviewer/issues"
+  },
+  "homepage": "https://github.com/andreleblanc-wf/bcodeviewer",
+  "devDependencies": {
+  }
+}
